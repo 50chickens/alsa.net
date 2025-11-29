@@ -12,4 +12,6 @@ namespace Alsa.Net.Core
         void Error(string message);
         void Error(Exception ex, string message);
     }
+
+    
 }
