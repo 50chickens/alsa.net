@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29215.179
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36705.20 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alsa.Net", "projects\Alsa.Net\Alsa.Net.csproj", "{8E1A4040-0E94-428A-9530-56E44E8C2EB2}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{EC409656-6AEC-42F8-AE49-CA75186379F9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example.Recording", "examples\Example.Recording\Example.Recording.csproj", "{96C25702-6D77-449D-9C37-CF4725038A32}"
@@ -15,16 +13,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Mixer", "examples\E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Configuration", "examples\Example.Configuration\Example.Configuration.csproj", "{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net", "Alsa.Net\Alsa.Net.csproj", "{8DF42032-9F80-BC0E-5299-CB5988F1BF96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Tests", "Alsa.Net.Tests\Alsa.Net.Tests.csproj", "{D6056E85-B423-8855-B5A9-963317914822}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Core", "Alsa.Net.Core\Alsa.Net.Core.csproj", "{7A577D70-D310-4274-82E1-6AD1DAF0B894}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8E1A4040-0E94-428A-9530-56E44E8C2EB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E1A4040-0E94-428A-9530-56E44E8C2EB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E1A4040-0E94-428A-9530-56E44E8C2EB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E1A4040-0E94-428A-9530-56E44E8C2EB2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{96C25702-6D77-449D-9C37-CF4725038A32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{96C25702-6D77-449D-9C37-CF4725038A32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96C25702-6D77-449D-9C37-CF4725038A32}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -41,6 +41,18 @@ Global
 		{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DF42032-9F80-BC0E-5299-CB5988F1BF96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DF42032-9F80-BC0E-5299-CB5988F1BF96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DF42032-9F80-BC0E-5299-CB5988F1BF96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DF42032-9F80-BC0E-5299-CB5988F1BF96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6056E85-B423-8855-B5A9-963317914822}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6056E85-B423-8855-B5A9-963317914822}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6056E85-B423-8855-B5A9-963317914822}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6056E85-B423-8855-B5A9-963317914822}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,14 +1,10 @@
-using System;
-using System.Collections.Generic;
 using Alsa.Net.Internal;
 
 namespace Alsa.Net
 {
-    // MixerControlChannelInfo and MixerControlInfo moved to Internal (`Alsa.Net.Internal.MixerControlTypes.cs`).
-
-    public static class MixerProbe
+    public class MixerProbe
     {
-        public static MixerControlInfo[] GetControlsForCard(int card)
+        public MixerControlInfo[] GetControlsForCard(int card)
         {
             var controls = new List<MixerControlInfo>();
             IntPtr mixer = IntPtr.Zero;

@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
-namespace Alsa.Net.Internal;
+﻿namespace Alsa.Net.Internal;
 
 class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 {
@@ -135,11 +133,11 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         fixed (byte* buffer = readBuffer)
         {
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested && wavStream.Read(readBuffer) != 0)
-                {
-                    int rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
-                    Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_writei -> {rv} (frames requested={frames})");
-                    ThrowErrorMessage(rv, ExceptionMessages.CanNotWriteToDevice);
-                }
+            {
+                int rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
+                Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_writei -> {rv} (frames requested={frames})");
+                ThrowErrorMessage(rv, ExceptionMessages.CanNotWriteToDevice);
+            }
         }
     }
 
@@ -332,17 +330,17 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         if (_mixer != default)
             return;
 
-            lock (MixerInitializationLock)
-            {
-                IntPtr mix = IntPtr.Zero;
-                ThrowErrorMessage(InteropAlsa.snd_mixer_open(out mix, 0), ExceptionMessages.CanNotOpenMixer);
-                _mixer = mix;
-                ThrowErrorMessage(InteropAlsa.snd_mixer_attach(_mixer, Settings.MixerDeviceName), ExceptionMessages.CanNotAttachMixer);
-                ThrowErrorMessage(InteropAlsa.snd_mixer_selem_register(_mixer, IntPtr.Zero, IntPtr.Zero), ExceptionMessages.CanNotRegisterMixer);
-                ThrowErrorMessage(InteropAlsa.snd_mixer_load(_mixer), ExceptionMessages.CanNotLoadMixer);
+        lock (MixerInitializationLock)
+        {
+            IntPtr mix = IntPtr.Zero;
+            ThrowErrorMessage(InteropAlsa.snd_mixer_open(out mix, 0), ExceptionMessages.CanNotOpenMixer);
+            _mixer = mix;
+            ThrowErrorMessage(InteropAlsa.snd_mixer_attach(_mixer, Settings.MixerDeviceName), ExceptionMessages.CanNotAttachMixer);
+            ThrowErrorMessage(InteropAlsa.snd_mixer_selem_register(_mixer, IntPtr.Zero, IntPtr.Zero), ExceptionMessages.CanNotRegisterMixer);
+            ThrowErrorMessage(InteropAlsa.snd_mixer_load(_mixer), ExceptionMessages.CanNotLoadMixer);
 
-                _mixelElement = InteropAlsa.snd_mixer_first_elem(_mixer);
-            }
+            _mixelElement = InteropAlsa.snd_mixer_first_elem(_mixer);
+        }
     }
 
     void CloseMixer()

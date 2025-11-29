@@ -10,16 +10,22 @@ public static class InteropAlsa
     const CharSet CSet = CharSet.Ansi;
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
+    /// <summary>
+    /// Gets a human-readable string describing the error code.
+    /// </summary>
+    /// <param name="errnum">The error code.</param>
+    /// <returns>A human-readable string describing the error code.</returns>
+    ///
     public static extern IntPtr snd_strerror(int errnum); // returns const char*
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
     public static extern int snd_pcm_open(ref IntPtr pcm, string name, snd_pcm_stream_t stream, int mode);
 
-        [DllImport(AlsaLibrary, CallingConvention = CConvention)]
-        public static extern int snd_card_next(ref int card);
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_card_next(ref int card);
 
-        [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
-        public static extern IntPtr snd_card_get_name(int card);
+    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
+    public static extern IntPtr snd_card_get_name(int card);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_start(IntPtr pcm);
@@ -41,7 +47,7 @@ public static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_recover(IntPtr pcm, int err, int silent);
-    
+
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_writei(IntPtr pcm, IntPtr buffer, nuint size);
 
@@ -71,7 +77,7 @@ public static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_hw_params(IntPtr pcm, IntPtr @params);
-    
+
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_pcm_hw_params_get_period_size(IntPtr @params, nuint* frames, int* dir);
 
@@ -98,7 +104,7 @@ public static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern IntPtr snd_mixer_elem_next(IntPtr elem);
-    
+
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
     public static extern string snd_mixer_selem_get_name(IntPtr elem);
 

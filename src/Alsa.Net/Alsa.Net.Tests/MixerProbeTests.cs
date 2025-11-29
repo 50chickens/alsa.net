@@ -1,6 +1,6 @@
-using NUnit.Framework;
-using System.IO;
 using Alsa.Net.Internal;
+using NUnit.Framework;
+using System.Linq;
 
 namespace Alsa.Net.Tests
 {
@@ -11,9 +11,10 @@ namespace Alsa.Net.Tests
         [Category("Integration")]
         public void GetControlsForDefaultCard_ReturnsControls()
         {
-            var cards = AlsaCardEnumerator.GetCards();
+            var alsaCardEnumerator = new AlsaCardEnumerator();
+            var cards = alsaCardEnumerator.GetCards();
             Assert.IsNotNull(cards.FirstOrDefault(), "No ALSA cards found on system.");
-              
+
         }
     }
 }

@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../projects/Alsa.Net/Alsa.Net.csproj" />
+    <ProjectReference Include="..\Alsa.Net\Alsa.Net.csproj" />
   </ItemGroup>
 
 </Project>

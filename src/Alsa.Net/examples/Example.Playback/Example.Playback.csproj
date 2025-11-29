@@ -9,7 +9,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\projects\Alsa.Net\Alsa.Net.csproj" />
+	  <ProjectReference Include="..\..\Alsa.Net\Alsa.Net.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="example.wav">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 </Project>
