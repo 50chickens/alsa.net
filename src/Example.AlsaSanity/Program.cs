@@ -1,9 +1,8 @@
-﻿
-namespace Example.AlsaSanity
+﻿namespace Example.AlsaSanity
 {
     public class Program
     {
-        public void Main(string[] args)
+        public static void Main(string[] args)
         {
             var sanityTester = new AlsaSanityTester();
             sanityTester.TestSanity();

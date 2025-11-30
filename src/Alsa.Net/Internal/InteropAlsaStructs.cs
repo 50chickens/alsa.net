@@ -1,13 +1,13 @@
 ﻿namespace Alsa.Net.Internal;
 
-public enum snd_pcm_stream_t
+internal enum snd_pcm_stream_t
 {
     SND_PCM_STREAM_PLAYBACK = 0,
     SND_PCM_STREAM_CAPTURE = 1,
     SND_PCM_STREAM_LAST = SND_PCM_STREAM_CAPTURE,
 }
 
-public enum snd_pcm_format_t
+internal enum snd_pcm_format_t
 {
     SND_PCM_FORMAT_UNKNOWN = -1,
     SND_PCM_FORMAT_S8 = 0,
@@ -60,7 +60,7 @@ public enum snd_pcm_format_t
     SND_PCM_FORMAT_LAST = SND_PCM_FORMAT_DSD_U32_BE,
 }
 
-public enum snd_pcm_access_t
+internal enum snd_pcm_access_t
 {
     SND_PCM_ACCESS_MMAP_INTERLEAVED = 0,
     SND_PCM_ACCESS_MMAP_NONINTERLEAVED = 1,
@@ -70,7 +70,7 @@ public enum snd_pcm_access_t
     SND_PCM_ACCESS_LAST = SND_PCM_ACCESS_RW_NONINTERLEAVED,
 }
 
-public enum snd_mixer_selem_channel_id
+internal enum snd_mixer_selem_channel_id
 {
     SND_MIXER_SCHN_UNKNOWN = -1,
     SND_MIXER_SCHN_FRONT_LEFT = 0,
