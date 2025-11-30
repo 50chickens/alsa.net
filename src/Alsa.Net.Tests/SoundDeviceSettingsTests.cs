@@ -1,10 +1,23 @@
-﻿using NUnit.Framework;
+﻿using Alsa.Net.Core;
+using Microsoft.Extensions.Configuration;
+using NUnit.Framework;
 
 namespace Alsa.Net.Tests
 {
     [TestFixture]
     public class SoundDeviceSettingsTests
     {
+        private readonly IConfiguration _iconfiguration = TestUtils.BuildTestConfiguration();
+        private ILog<NUnitLoggerTests> _log;
+
+        [OneTimeSetUp]
+        public void Setup()
+        {
+            var logBuilder = new LogBuilder(_iconfiguration);
+            logBuilder.Build();
+            _log = LogManager.GetLogger<NUnitLoggerTests>();
+            _log.Info("Logger initialized for NUnitLoggerTests.");
+        }
         [Test]
         public void Can_Create_AlsaDevice()
         {
