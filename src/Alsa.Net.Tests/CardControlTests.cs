@@ -1,25 +1,23 @@
 using Alsa.Net.Core;
-using Alsa.Net.Internal;
 using Alsa.Net.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
-using System.Linq;
 
 namespace Alsa.Net.Tests
 {
     [TestFixture]
-    public class MixerProbeTests
+    public class CardControlTests
     {
         private readonly IConfiguration _iconfiguration = TestUtils.BuildTestConfiguration();
-        private ILog<MixerProbeTests> _log;
+        private ILog<CardControlTests> _log;
 
         [OneTimeSetUp]
         public void Setup()
         {
             var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
-            _log = LogManager.GetLogger<MixerProbeTests>();
-            _log.Info("Logger initialized for MixerProbeTests.");
+            _log = LogManager.GetLogger<CardControlTests>();
+            _log.Info($"Logger initialized for {GetType().Name}.");
 
         }
         [Test]
@@ -27,11 +25,7 @@ namespace Alsa.Net.Tests
         public void GetControlsForDefaultCard_ReturnsControls()
         {
             _log.Info("Starting GetControlsForDefaultCard_ReturnsControls test.");
-            return;
-            var alsaCardEnumerator = new AlsaCardEnumerator();
-            var cards = alsaCardEnumerator.GetCards();
-            Assert.IsNotNull(cards.FirstOrDefault(), "No ALSA cards found on system.");
-
+            
         }
         
     }

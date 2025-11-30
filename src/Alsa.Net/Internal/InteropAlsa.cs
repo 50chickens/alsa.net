@@ -2,20 +2,22 @@
 
 namespace Alsa.Net.Internal;
 
-public static class InteropAlsa
+/// <summary>
+/// Provides P/Invoke signatures for libasound (ALSA) functions used by this library.
+/// </summary>
+internal static class InteropAlsa
 {
     const string AlsaLibrary = "libasound";
 
     const CallingConvention CConvention = CallingConvention.Cdecl;
     const CharSet CSet = CharSet.Ansi;
 
-    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
     /// <summary>
     /// Gets a human-readable string describing the error code.
     /// </summary>
     /// <param name="errnum">The error code.</param>
     /// <returns>A human-readable string describing the error code.</returns>
-    ///
+    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
     public static extern IntPtr snd_strerror(int errnum); // returns const char*
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]

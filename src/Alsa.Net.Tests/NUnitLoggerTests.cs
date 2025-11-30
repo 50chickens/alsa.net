@@ -18,7 +18,7 @@ namespace Alsa.Net.Tests
             var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
             _log = LogManager.GetLogger<NUnitLoggerTests>();
-            _log.Info("Logger initialized for NUnitLoggerTests.");
+            _log.Info($"Logger initialized for {GetType().Name}.");
         }
         [Test]
         public void Can_See_Log_Output_In_NUnit_Console()

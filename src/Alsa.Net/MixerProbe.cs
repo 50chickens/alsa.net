@@ -2,8 +2,16 @@ using Alsa.Net.Internal;
 
 namespace Alsa.Net
 {
+    /// <summary>
+    /// Probes the system mixer and returns control information for a given card.
+    /// </summary>
     public class MixerProbe
     {
+        /// <summary>
+        /// Gets mixer control information for the specified card index.
+        /// </summary>
+        /// <param name="card">The card index (typically 0 for the first card).</param>
+        /// <returns>An array of <see cref="MixerControlInfo"/> describing controls found on the card.</returns>
         public MixerControlInfo[] GetControlsForCard(int card)
         {
             var controls = new List<MixerControlInfo>();

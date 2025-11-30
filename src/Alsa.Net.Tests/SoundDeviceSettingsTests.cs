@@ -19,7 +19,7 @@ namespace Alsa.Net.Tests
             var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
             _log = LogManager.GetLogger<NUnitLoggerTests>();
-            _log.Info("Logger initialized for NUnitLoggerTests.");
+            _log.Info($"Logger initialized for {GetType().Name}.");
         }
         [Test]
         public void Can_Create_AlsaDevice()
@@ -27,9 +27,9 @@ namespace Alsa.Net.Tests
             // create a config for your audio hardware setup
             var config = new SoundDeviceSettings
             {
-                RecordingDeviceName = "hw:recording01", // alsa name of recording device. use arecord -L for a list of available devices. "default" for systems default
-                PlaybackDeviceName = "hw:playback01", // alsa name of playback device. use aplay -L for a list of available devices. "default" for systems default
-                MixerDeviceName = "hw:mixer01", // alsa name of mixer device. ensure your device actually supports this. some might not have volume channels etc.
+                RecordingDeviceName = "default", // alsa name of recording device. use arecord -L for a list of available devices. "default" for systems default
+                PlaybackDeviceName = "default", // alsa name of playback device. use aplay -L for a list of available devices. "default" for systems default
+                MixerDeviceName = "default", // alsa name of mixer device. ensure your device actually supports this. some might not have volume channels etc.
 
                 RecordingBitsPerSample = 16, // bit depth of recorded audio data. check your devices capabilities on values to set here. default is 16
                 RecordingChannels = 2, // number of audio channels to record. default is 2
@@ -38,8 +38,8 @@ namespace Alsa.Net.Tests
 
             // create virtual interface to use your config
             using var alsaDevice = AlsaDeviceBuilder.Create(config);
-            var message = JsonConvert.SerializeObject(new { alsaDevice });
-            _log.Info(message);
+             var message = JsonConvert.SerializeObject(new { alsaDevice });
+             _log.Info(message);
         }
     }
 }
