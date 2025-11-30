@@ -11,7 +11,7 @@ namespace Alsa.Net.Core
     {
         public static LogBuilder UseNunitTestContext(this LogBuilder logBuilder, Common.Logging.LogLevel? logLevel = null)
         {
-            var target = new NunitLogTarget();
+            var target = new NUnitLogTarget();
             var level = logLevel ?? logBuilder.Context.LogLevel;
             var loggingRule = new LoggingRule("*", level.ToNlogLogLevel(), target);
             logBuilder.AddRegistration(new LogRegistration
@@ -24,14 +24,20 @@ namespace Alsa.Net.Core
 
     }
 
-    public class NunitLogTarget : TargetWithLayout
+    public class NUnitLogTarget : TargetWithLayout
     {
 
-        public NunitLogTarget()
+        public NUnitLogTarget()
         {
             // use longdate, logger shortname, message, exception with innerexception
-            Layout = "${longdate} | ${logger:shortname = true} - ${message} ${oneexception:inner=$newline}$exception:frmat=ToString}";
+            Layout = "${longdate} | ${logger:shortname=true} - ${message} ${exception:format=ToString}${newline}";
             Name = "Nunit";
+        }
+        protected override void Write(NLog.LogEventInfo logEvent)
+        {
+            // render the layout and write to stdout so test runners (and NUnit) capture the output
+            var text = this.Layout.Render(logEvent);
+            System.Console.WriteLine(text);
         }
     }
     public static class NlogExtensions

@@ -22,8 +22,20 @@ namespace Alsa.Net.Core
             //register each LogRegistration With NLog
             foreach (var logRegistration in _logRegistrations)
             {
-                nlogconfig.AddTarget("target", logRegistration.Target);
+                // add target using its configured name (or fallback to a generated name)
+                var targetName = !string.IsNullOrEmpty(logRegistration.Target?.Name) ? logRegistration.Target.Name : "target";
+                nlogconfig.AddTarget(targetName, logRegistration.Target);
+                // add any logging rules configured for this registration
+                if (logRegistration.LoggingRules != null)
+                {
+                    foreach (var rule in logRegistration.LoggingRules)
+                    {
+                        nlogconfig.LoggingRules.Add(rule);
+                    }
+                }
             }
+            // apply configuration to NLog so log events are routed to the registered targets
+            NLog.LogManager.Configuration = nlogconfig;
         }
         public void AddRegistration(LogRegistration registration)
         {
