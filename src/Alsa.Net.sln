@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36705.20 d17.14
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{EC409656-6AEC-42F8-AE49-CA75186379F9}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Tests", "Alsa.Net.Tests\Alsa.Net.Tests.csproj", "{D6056E85-B423-8855-B5A9-963317914822}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Core", "Alsa.Net.Core\Alsa.Net.Core.csproj", "{7A577D70-D310-4274-82E1-6AD1DAF0B894}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Tests.NUnit", "Alsa.Net.Tests.NUnit\Alsa.Net.Tests.NUnit.csproj", "{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,6 +55,10 @@ Global
 		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7A577D70-D310-4274-82E1-6AD1DAF0B894}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

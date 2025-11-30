@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Alsa.Net.Tests.NUnit\Alsa.Net.Tests.NUnit.csproj" />
     <ProjectReference Include="..\Alsa.Net\Alsa.Net.csproj" />
   </ItemGroup>
 

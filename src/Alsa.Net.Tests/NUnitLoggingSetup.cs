@@ -7,7 +7,7 @@ namespace Alsa.Net.Tests
     [SetUpFixture]
     public class NUnitLoggingSetup
     {
-        [OneTimeSetUp]
+        
         public void RegisterNUnitTarget()
         {
             var config = LogManager.Configuration ?? new LoggingConfiguration();
