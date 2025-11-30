@@ -1,6 +1,4 @@
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.IO;
 
 namespace Alsa.Net.Internal
 {
@@ -36,11 +34,6 @@ namespace Alsa.Net.Internal
                 {
                     try
                     {
-                        // Avoid calling snd_card_get_name (it may crash on some
-                        // platforms). Prefer reading `/proc/asound/cards` which
-                        // is available on Linux systems and provides the card id
-                        // and short name. Fall back to empty name when parsing
-                        // fails.
                         string name = names.TryGetValue(card, out var n) ? n : string.Empty;
                         list.Add(new Card(card, name));
                     }

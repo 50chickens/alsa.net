@@ -26,10 +26,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="NLog" Version="6.0.6" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\Alsa.Net.Core\Alsa.Net.Core.csproj" />
 	</ItemGroup>
 
