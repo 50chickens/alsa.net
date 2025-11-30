@@ -5,7 +5,7 @@ namespace Alsa.Net.Core
 {
     public class LogBuilderContext
     {
-        private IConfiguration _configuration;
+        private readonly IConfiguration _configuration;
 
         public LoggingSettings Settings { get; }
         public LogLevel LogLevel { get; internal set; }

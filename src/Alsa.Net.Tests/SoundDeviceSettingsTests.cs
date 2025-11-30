@@ -1,4 +1,5 @@
 ﻿using Alsa.Net.Core;
+using Alsa.Net.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 
@@ -13,7 +14,7 @@ namespace Alsa.Net.Tests
         [OneTimeSetUp]
         public void Setup()
         {
-            var logBuilder = new LogBuilder(_iconfiguration);
+            var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
             _log = LogManager.GetLogger<NUnitLoggerTests>();
             _log.Info("Logger initialized for NUnitLoggerTests.");
