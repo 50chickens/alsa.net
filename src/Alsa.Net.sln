@@ -21,6 +21,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Core", "Alsa.Net.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Tests.NUnit", "Alsa.Net.Tests.NUnit\Alsa.Net.Tests.NUnit.csproj", "{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Interop", "Alsa.Net.Interop\Alsa.Net.Interop.csproj", "{D24C6522-37C1-4A8D-A32C-63CEB31706DC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.AlsaSanity", "Example.AlsaSanity\Example.AlsaSanity.csproj", "{1CC5DA99-89F9-411E-95D0-BF34CEDD3860}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +63,14 @@ Global
 		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C973E383-5F8D-4428-B24E-BD1B4D5DAC3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D24C6522-37C1-4A8D-A32C-63CEB31706DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D24C6522-37C1-4A8D-A32C-63CEB31706DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D24C6522-37C1-4A8D-A32C-63CEB31706DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D24C6522-37C1-4A8D-A32C-63CEB31706DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CC5DA99-89F9-411E-95D0-BF34CEDD3860}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CC5DA99-89F9-411E-95D0-BF34CEDD3860}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CC5DA99-89F9-411E-95D0-BF34CEDD3860}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CC5DA99-89F9-411E-95D0-BF34CEDD3860}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +80,7 @@ Global
 		{659B145E-A2FA-410F-9C2B-0B1CC0906953} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 		{A92053ED-0378-47FE-8136-CE8505909CB4} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 		{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
+		{1CC5DA99-89F9-411E-95D0-BF34CEDD3860} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2CDD67B-7C3E-4D94-8274-4E353D30FF49}
