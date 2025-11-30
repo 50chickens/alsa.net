@@ -13,7 +13,6 @@ namespace Alsa.Net.Tests
         [OneTimeSetUp]
         public void Setup()
         {
-            
             var logBuilder = new LogBuilder(_iconfiguration);
             logBuilder.Build();
             _log = LogManager.GetLogger<NUnitLoggerTests>();
