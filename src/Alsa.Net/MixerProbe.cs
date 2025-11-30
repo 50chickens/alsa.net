@@ -1,4 +1,5 @@
 using Alsa.Net.Internal;
+using System.Runtime.InteropServices;
 
 namespace Alsa.Net
 {
@@ -27,7 +28,8 @@ namespace Alsa.Net
                 var elem = Internal.InteropAlsa.snd_mixer_first_elem(mixer);
                 while (elem != IntPtr.Zero)
                 {
-                    string name = Internal.InteropAlsa.snd_mixer_selem_get_name(elem) ?? string.Empty;
+                    var namePtr = Internal.InteropAlsa.snd_mixer_selem_get_name(elem);
+                    string name = namePtr != IntPtr.Zero ? Marshal.PtrToStringUTF8(namePtr) ?? string.Empty : string.Empty;
                     var channels = new List<MixerControlChannelInfo>();
                     for (int ch = 0; ch < 2; ch++)
                     {

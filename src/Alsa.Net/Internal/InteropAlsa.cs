@@ -26,8 +26,11 @@ internal static class InteropAlsa
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_card_next(ref int card);
 
-    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
-    public static extern IntPtr snd_card_get_name(int card);
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_card_get_name(int card, out IntPtr name);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_card_get_longname(int card, out IntPtr name);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_start(IntPtr pcm);
@@ -51,10 +54,10 @@ internal static class InteropAlsa
     public static extern int snd_pcm_recover(IntPtr pcm, int err, int silent);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
-    public static extern int snd_pcm_writei(IntPtr pcm, IntPtr buffer, nuint size);
+    public static extern nint snd_pcm_writei(IntPtr pcm, IntPtr buffer, nuint size);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
-    public static extern int snd_pcm_readi(IntPtr pcm, IntPtr buffer, nuint size);
+    public static extern nint snd_pcm_readi(IntPtr pcm, IntPtr buffer, nuint size);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_set_params(IntPtr pcm, snd_pcm_format_t format, snd_pcm_access_t access, uint channels, uint rate, int softResample, uint latency);
@@ -107,8 +110,12 @@ internal static class InteropAlsa
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern IntPtr snd_mixer_elem_next(IntPtr elem);
 
-    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
-    public static extern string snd_mixer_selem_get_name(IntPtr elem);
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_mixer_selem_get_name(IntPtr elem);
+
+    // Free memory allocated by ALSA helper functions that return allocated strings
+    [DllImport("libc", CallingConvention = CConvention)]
+    public static extern void free(IntPtr ptr);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_id_malloc(ref IntPtr selemId);

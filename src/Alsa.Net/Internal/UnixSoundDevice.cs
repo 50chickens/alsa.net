@@ -134,7 +134,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         {
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested && wavStream.Read(readBuffer) != 0)
             {
-                int rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
+                nint rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
                 Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_writei -> {rv} (frames requested={frames})");
                 ThrowErrorMessage(rv, ExceptionMessages.CanNotWriteToDevice);
             }
@@ -158,7 +158,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         {
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested)
             {
-                int rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
+                nint rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
                 Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_readi -> {rv} (frames requested={frames})");
                 ThrowErrorMessage(rv, ExceptionMessages.CanNotReadFromDevice);
                 saveStream.Write(readBuffer);
@@ -173,7 +173,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         nuint frames;
 
         fixed (int* dirP = &dir)
-            ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP), ExceptionMessages.CanNotGetPeriodSize);
+                ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP), ExceptionMessages.CanNotGetPeriodSize);
 
         var bufferSize = frames * header.BlockAlign;
         var readBuffer = new byte[(int)bufferSize];
@@ -369,17 +369,18 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         CloseMixer();
     }
 
-    static void ThrowErrorMessage(int errorNum, string message)
+    static void ThrowErrorMessage(nint errorNum, string message)
     {
         if (errorNum >= 0)
             return;
 
-        var errorMsg = InteropAlsa.StrError(errorNum);
+        var errno = (int)errorNum;
+        var errorMsg = InteropAlsa.StrError(errno);
         try
         {
-            Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errorNum}. {errorMsg}");
+            Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errno}. {errorMsg}");
         }
         catch { }
-        throw new AlsaDeviceException($"{message}. Error {errorNum}. {errorMsg}.");
+        throw new AlsaDeviceException($"{message}. Error {errno}. {errorMsg}.");
     }
 }
