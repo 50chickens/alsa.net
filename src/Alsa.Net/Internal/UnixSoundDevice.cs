@@ -230,6 +230,9 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         OpenMixer();
 
+        if (InteropAlsa.snd_mixer_selem_has_playback_volume(_mixelElement) == 0)
+            throw new AlsaDeviceException(ExceptionMessages.CanNotSetVolume + " - element does not support playback volume");
+
         ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, &volumeLeft), ExceptionMessages.CanNotSetVolume);
         ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, &volumeRight), ExceptionMessages.CanNotSetVolume);
 
@@ -376,11 +379,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         var errno = (int)errorNum;
         var errorMsg = InteropAlsa.StrError(errno);
-        try
-        {
-            Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errno}. {errorMsg}");
-        }
-        catch { }
+        Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errno}. {errorMsg}");
         throw new AlsaDeviceException($"{message}. Error {errno}. {errorMsg}.");
     }
 }

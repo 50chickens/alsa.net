@@ -1,8 +1,8 @@
-using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
+using Alsa.Net.Core;
 
 namespace Alsa.Net.Internal
 {
-    
     /// <summary>
     /// Gets a list of available ALSA sound cards.
     /// </summary>
@@ -13,75 +13,51 @@ namespace Alsa.Net.Internal
         /// </summary>
         public void Dispose()
         {
-            // Clean up resources here
+            // no managed resources
         }
 
         /// <summary>
-        /// Gets a list of all available ALSA sound cards.
+        /// Gets a list of all available ALSA sound cards using libasound interop.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An array of discovered <see cref="Card"/> instances.</returns>
         public IEnumerable<Card> GetCards()
         {
-            try
-            {
-                var list = new List<Card>();
-                var names = ReadProcCardNames();
-                int card = -1;
-                int returnCode = InteropAlsa.snd_card_next(ref card);
-                if (returnCode < 0) return Array.Empty<Card>();
+            var list = new List<Card>();
+            int card = -1;
 
-                while (card >= 0)
-                {
+            // Start enumeration
+            var rc = InteropAlsa.snd_card_next(ref card);
+            if (rc < 0)
+                throw new InvalidOperationException($"snd_card_next failed: {InteropAlsa.StrError(rc)}");
+
+            while (card >= 0)
+            {
+                // Obtain the short name for the card via the proper libasound API.
+                IntPtr namePtr = IntPtr.Zero;
+                rc = InteropAlsa.snd_card_get_name(card, out namePtr);
+                if (rc < 0)
+                    throw new InvalidOperationException($"snd_card_get_name({card}) failed: {InteropAlsa.StrError(rc)}");
+
                     try
                     {
-                        string name = names.TryGetValue(card, out var n) ? n : string.Empty;
-                        list.Add(new Card(card, name));
+                        string name = Marshal.PtrToStringUTF8(namePtr) ?? string.Empty;
+                        list.Add(new Card(LogManager.GetLogger<Card>(), card, name));
                     }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"[AlsaCardEnumerator] exception reading name for card={card}: {ex}");
-                        list.Add(new Card(card, string.Empty));
-                    }
-
-                    returnCode = InteropAlsa.snd_card_next(ref card);
-                    if (returnCode < 0) break;
-                }
-
-                return list.ToArray();
-            }
-            catch
-            {
-                return Array.Empty<Card>();
-            }
-        }
-
-        private static Dictionary<int, string> ReadProcCardNames()
-        {
-            var dict = new Dictionary<int, string>();
-            try
-            {
-                var path = "/proc/asound/cards";
-                if (!File.Exists(path)) return dict;
-                var lines = File.ReadAllLines(path);
-                // Expect lines like: " 0 [IQaudIOCODEC     ]: ..."
-                    var rx = new Regex("^\\s*(\\d+)\\s+\\[([^\\]]+)\\]", RegexOptions.Compiled);
-                foreach (var line in lines)
+                finally
                 {
-                    var m = rx.Match(line);
-                    if (!m.Success) continue;
-                    if (int.TryParse(m.Groups[1].Value, out var id))
-                    {
-                        var name = m.Groups[2].Value.Trim();
-                        if (!string.IsNullOrEmpty(name)) dict[id] = name;
-                    }
+                    // free memory allocated by the ALSA helper
+                    if (namePtr != IntPtr.Zero)
+                        InteropAlsa.free(namePtr);
                 }
-            }
-            catch
-            {
-                // best-effort only
+
+                rc = InteropAlsa.snd_card_next(ref card);
+                if (rc < 0)
+                    throw new InvalidOperationException($"snd_card_next failed: {InteropAlsa.StrError(rc)}");
             }
 
-            return dict;
+            return list.ToArray();
         }
     }
 }
+
+

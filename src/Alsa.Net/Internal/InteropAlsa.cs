@@ -163,6 +163,9 @@ internal static class InteropAlsa
     public static extern int snd_mixer_selem_has_playback_channel(IntPtr elem, snd_mixer_selem_channel_id channel);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_mixer_selem_has_playback_volume(IntPtr elem);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_has_capture_channel(IntPtr elem, snd_mixer_selem_channel_id channel);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]

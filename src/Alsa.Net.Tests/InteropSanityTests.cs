@@ -58,7 +58,7 @@ namespace Alsa.Net.Tests
 
                     if (p != IntPtr.Zero)
                     {
-                        try { InteropDiagnostics.Free(p); } catch { }
+                        InteropDiagnostics.Free(p);
                     }
                 }
             }
@@ -89,7 +89,11 @@ namespace Alsa.Net.Tests
                 }
                 finally
                 {
-                    try { InteropDiagnostics.MixerClose(mixer); } catch { }
+                    var closeRes = InteropDiagnostics.MixerClose(mixer);
+                    if (!closeRes.Success || closeRes.Result < 0)
+                    {
+                        throw new InvalidOperationException($"snd_mixer_close failed: {(closeRes.Error ?? ("errno " + closeRes.Result))}");
+                    }
                 }
             }
 
