@@ -136,6 +136,9 @@ internal static class InteropAlsa
     public static extern int snd_mixer_selem_set_playback_switch_all(IntPtr elem, int value);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_mixer_selem_set_playback_switch(IntPtr elem, snd_mixer_selem_channel_id channel, int value);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_mixer_selem_get_playback_volume_range(IntPtr elem, nint* min, nint* max);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
@@ -152,6 +155,9 @@ internal static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_set_capture_switch_all(IntPtr elem, int value);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_mixer_selem_set_capture_switch(IntPtr elem, snd_mixer_selem_channel_id channel, int value);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_mixer_selem_get_capture_volume_range(IntPtr elem, nint* min, nint* max);
