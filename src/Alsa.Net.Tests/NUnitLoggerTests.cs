@@ -1,6 +1,5 @@
 ﻿using Alsa.Net.Core;
 using Microsoft.Extensions.Configuration;
-using NLog.Config;
 using NUnit.Framework;
 
 namespace Alsa.Net.Tests
@@ -14,13 +13,7 @@ namespace Alsa.Net.Tests
         [OneTimeSetUp]
         public void Setup()
         {
-            // Register the custom NUnitTestContextTarget for this test run
-            var config = NLog.LogManager.Configuration ?? new LoggingConfiguration();
-            var nUnitTarget = new NUnitLogTarget();
-            config.AddTarget("nunit", nUnitTarget);
-            config.AddRuleForAllLevels(nUnitTarget);
-            NLog.LogManager.Configuration = config;
-
+            
             var logBuilder = new LogBuilder(_iconfiguration);
             logBuilder.Build();
             _log = LogManager.GetLogger<NUnitLoggerTests>();
