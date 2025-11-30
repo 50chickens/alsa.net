@@ -1,7 +1,9 @@
 ﻿using Alsa.Net.Core;
 using Alsa.Net.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using NUnit.Framework;
+using System;
 
 namespace Alsa.Net.Tests
 {
@@ -36,6 +38,8 @@ namespace Alsa.Net.Tests
 
             // create virtual interface to use your config
             using var alsaDevice = AlsaDeviceBuilder.Create(config);
+            var message = JsonConvert.SerializeObject(new { alsaDevice });
+            _log.Info(message);
         }
     }
 }

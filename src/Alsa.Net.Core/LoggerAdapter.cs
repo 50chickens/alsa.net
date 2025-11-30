@@ -20,5 +20,6 @@ namespace Alsa.Net.Core
         public void Warn(string message) => _logger.LogWarning(message);
         public void Error(string message) => _logger.LogError(message);
         public void Error(Exception ex, string message) => _logger.LogError(ex, message);
+        
     }
 }
