@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alsa.Net.Interop", "Alsa.Ne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.AlsaSanity", "examples\Example.AlsaSanity\Example.AlsaSanity.csproj", "{7181B5E4-307E-D426-1068-FBDE7179D6D0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.SNRReduction", "examples\Example.SNRReduction\Example.SNRReduction.csproj", "{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{7181B5E4-307E-D426-1068-FBDE7179D6D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7181B5E4-307E-D426-1068-FBDE7179D6D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7181B5E4-307E-D426-1068-FBDE7179D6D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +87,7 @@ Global
 		{A92053ED-0378-47FE-8136-CE8505909CB4} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 		{87BF06EE-EEB9-498D-B7C0-7D7E28BFB0A3} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 		{7181B5E4-307E-D426-1068-FBDE7179D6D0} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
+		{EB21ED6F-35CB-B583-9DA3-FBC1D944ED30} = {EC409656-6AEC-42F8-AE49-CA75186379F9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2CDD67B-7C3E-4D94-8274-4E353D30FF49}

@@ -382,4 +382,5 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errno}. {errorMsg}");
         throw new AlsaDeviceException($"{message}. Error {errno}. {errorMsg}.");
     }
+
 }

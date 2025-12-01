@@ -19,7 +19,7 @@ namespace Alsa.Net.Tests
             var controls = first.GetMixerControls();
             Assert.IsNotNull(controls, "GetMixerControls returned null");
 
-            TestContext.Progress.WriteLine($"Found {controls.Length} controls for card '{first.Name}' (id={first.Id})");
+            TestContext.Progress.WriteLine($"Found {controls.Length} controls for card '{first.Name}' (id={first.Index})");
         }
     }
 }

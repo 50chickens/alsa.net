@@ -9,7 +9,7 @@ namespace Alsa.Net.Internal
     /// </summary>
     public class Card
     {
-        private int _id;
+        private int _index;
         private string _name;
         private readonly ILog<Card> _log;
 
@@ -17,18 +17,18 @@ namespace Alsa.Net.Internal
         /// Creates a new instance of the Card class.
         /// </summary>
         /// <param name="log">Logger instance scoped to this type.</param>
-        /// <param name="id">Card numeric id.</param>
+        /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
-        public Card(ILog<Card> log, int id, string name)
+        public Card(ILog<Card> log, int index, string name)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
-            _id = id;
+            _index = index;
             _name = name;
         }
         /// <summary>
         /// Id of the sound card.
         /// </summary>
-        public int Id => _id;
+        public int Index => _index;
         /// <summary>
         /// Name of the sound card.
         /// </summary>
@@ -53,7 +53,7 @@ namespace Alsa.Net.Internal
                 // (e.g. "hw:CARD=IQaudIOCODEC"). If we don't have a name,
                 // attach by numeric id (e.g. "hw:0"). Using the short name
                 // matches what `aplay -L` shows on many systems.
-                string attachName = !string.IsNullOrEmpty(_name) ? $"hw:CARD={_name}" : $"hw:{_id}";
+                string attachName = !string.IsNullOrEmpty(_name) ? $"hw:CARD={_name}" : $"hw:{_index}";
 
                 rc = InteropAlsa.snd_mixer_attach(mixer, attachName);
                 if (rc < 0) throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(rc)}");
