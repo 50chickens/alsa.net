@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Example.SNRReduction.Logging;
 using Microsoft.Extensions.Options;
 using NLog.Extensions.Logging;
 
@@ -53,6 +54,8 @@ internal class Program
         // Register SNRReductionOptions by delegating to IOptions object to remove IOptions dependency.
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SNRReductionOptions>>().Value);
 
+        // Register generic logging adapter so DI can inject ILog<T> where needed
+        builder.Services.AddSingleton(typeof(ILog<>), typeof(MSLoggerAdapter<>));
         builder.Services.AddSingleton<SNRReductionApp>();
         builder.Services.AddSingleton<ISNRReductionService, SNRReductionService>();
         // CreateApplicationBuilder has already added the Console, Debug, EventLog, and EventSource loggers.
@@ -60,39 +63,19 @@ internal class Program
         // e.g. builder.Logging.AddJsonConsole();
         
         builder.Logging.ClearProviders();
-        builder.Logging.AddNLog();
+        // add NLog provider, apply minimal programmatic config, and wire Common.Logging adapter
+        builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
         using var host = builder.Build();
 
         using var serviceScope = host.Services.CreateScope();
         var serviceProvider = serviceScope.ServiceProvider;
 
-        ILogger<Program> logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-        //get an Ilog from the Nlog factory 
+        var logger = serviceProvider.GetRequiredService<ILog<Program>>();
+        // get an ILog<T> from DI (wrapped around ILogger<T>)
 
-
-        logger.LogInformation("Application starting...");
-
-        try
-        {
-            serviceProvider.GetRequiredService<SNRReductionApp>().GetSNRReduction();
-        }
-        catch (Exception ex)
-        {
-            //Log.Logger.Fatal(ex, "Application exited unexpectedly.  See log file for details.");
-
-            if (ex is OptionsValidationException)
-            {
-                // Logger is configured to not write exceptions to the console, but write the validation errors to be more obvious.
-              //  Log.Logger.Fatal("Application exited due to invalid app settings:\r\n{ValidationErrors}", ex.Message.Replace("; ", Environment.NewLine));
-            }
-        }
-        finally
-        {
-            //Log.CloseAndFlush();
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Press any key to exit application.");
-        Console.ReadKey();
+        logger.Info("Application starting...");
+        serviceProvider.GetRequiredService<SNRReductionApp>().GetSNRReduction();
+        logger.Info("Application finished.");
+        
     }
 }
