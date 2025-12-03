@@ -27,7 +27,7 @@ namespace Alsa.Net.Internal
         /// 
         /// </summary>
         /// <returns>An array of discovered <see cref="Card"/> instances.</returns>
-        private IEnumerable<Card> GetCards()
+        public IEnumerable<Card> GetCards()
         {
             var list = new List<Card>();
             int cardIndex = -1;

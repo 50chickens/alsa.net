@@ -11,8 +11,8 @@ namespace Alsa.Net.Tests
         [Category("Integration")]
         public void GetControls_ForFirstCard_ReturnsArray()
         {
-            var enumerator = new AlsaCardEnumerator();
-            var cards = enumerator.GetCards();
+            var cardEnumerator = new AlsaCardEnumerator();
+            var cards = cardEnumerator.GetCards();
             var first = cards.FirstOrDefault();
             Assert.IsNotNull(first, "No ALSA cards found on system to test controls.");
 

@@ -78,17 +78,17 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Log.Logger.Fatal(ex, "Application exited unexpectedly.  See log file for details.");
+            //Log.Logger.Fatal(ex, "Application exited unexpectedly.  See log file for details.");
 
             if (ex is OptionsValidationException)
             {
                 // Logger is configured to not write exceptions to the console, but write the validation errors to be more obvious.
-                Log.Logger.Fatal("Application exited due to invalid app settings:\r\n{ValidationErrors}", ex.Message.Replace("; ", Environment.NewLine));
+              //  Log.Logger.Fatal("Application exited due to invalid app settings:\r\n{ValidationErrors}", ex.Message.Replace("; ", Environment.NewLine));
             }
         }
         finally
         {
-            Log.CloseAndFlush();
+            //Log.CloseAndFlush();
         }
 
         Console.WriteLine();
