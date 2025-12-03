@@ -10,11 +10,7 @@ public class SNRReductionApp(ILogger<SNRReductionApp> logger, ISNRReductionServi
     public void GetSNRReduction()
     {
         _logger.LogInformation("Starting SNR Reduction Application");
-
         _snrReductionService.FindBestLevelsForControls(_snrReductionOptions);
-
         _logger.LogInformation("SNR Reduction Application Finished");
-        
-        
     }
 }
