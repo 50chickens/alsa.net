@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NLog.Extensions.Logging;
 
 namespace Example.SNRReduction;
 internal class Program
@@ -59,14 +60,17 @@ internal class Program
         // e.g. builder.Logging.AddJsonConsole();
         
         builder.Logging.ClearProviders();
-        
+        builder.Logging.AddNLog();
         using var host = builder.Build();
 
         using var serviceScope = host.Services.CreateScope();
         var serviceProvider = serviceScope.ServiceProvider;
 
         ILogger<Program> logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-        Log.Logger.Information("Application starting...");
+        //get an Ilog from the Nlog factory 
+
+
+        logger.LogInformation("Application starting...");
 
         try
         {
