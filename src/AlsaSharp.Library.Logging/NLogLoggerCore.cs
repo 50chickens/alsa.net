@@ -1,5 +1,4 @@
 using System.Reflection;
-using AlsaSharp.Library.Logging;
 using NLog;
 
 namespace AlsaSharp.Library.Logging

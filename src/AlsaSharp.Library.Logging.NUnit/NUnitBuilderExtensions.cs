@@ -1,4 +1,5 @@
 ﻿using AlsaSharp.Library.Logging;
+using Example.SNRReduction.Logging;
 using NLog.Config;
 namespace AlsaSharp.Tests.NUnit
 {

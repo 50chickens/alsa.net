@@ -1,5 +1,5 @@
 using AlsaSharp;
-using Example.SNRReduction.Logging;
+using AlsaSharp.Library.Logging;
 
 namespace Example.SNRReduction;
 

@@ -1,6 +1,6 @@
-﻿using Examples.SNRReduction.Interfaces;
+﻿using AlsaSharp.Library.Logging;
+using Examples.SNRReduction.Interfaces;
 using Examples.SNRReduction.Models;
-using Example.SNRReduction.Logging;
 namespace Example.SNRReduction;
 
 public class SNRReductionApp(ILog<SNRReductionApp> logger, ISNRReductionService snrReductionService, SNRReductionOptions snrReductionOptions)

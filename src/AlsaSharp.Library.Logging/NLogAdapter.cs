@@ -1,13 +1,13 @@
+using AlsaSharp.Library.Logging;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace Example.SNRReduction.Logging;
 
-public class MSLoggerAdapter<T> : ILog<T>
+public class NLogAdapter<T> : ILog<T>
 {
     private readonly ILogger<T> _logger;
 
-    public MSLoggerAdapter(ILogger<T> logger)
+    public NLogAdapter(ILogger<T> logger)
     {
         _logger = logger;
     }
@@ -16,4 +16,5 @@ public class MSLoggerAdapter<T> : ILog<T>
     public void Debug(string message) => _logger.LogDebug(message);
     public void Warn(string message) => _logger.LogWarning(message);
     public void Error(Exception ex, string? message = null) => _logger.LogError(ex, message);
+    public void Error(string message) => _logger.LogError(message);
 }

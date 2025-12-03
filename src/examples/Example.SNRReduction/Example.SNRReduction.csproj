@@ -12,6 +12,7 @@
     <PackageReference Include="NLog.Extensions.Logging" Version="6.1.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AlsaSharp.Core\AlsaSharp.Core.csproj" />
     <ProjectReference Include="..\..\AlsaSharp\AlsaSharp.csproj" />
   </ItemGroup>
 </Project>

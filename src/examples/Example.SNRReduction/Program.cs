@@ -1,13 +1,10 @@
 using Examples.SNRReduction.Interfaces;
 using Examples.SNRReduction.Models;
 using Examples.SNRReduction.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Example.SNRReduction.Logging;
 using Microsoft.Extensions.Options;
 using NLog.Extensions.Logging;
+using AlsaSharp.Library.Logging;
 
 namespace Example.SNRReduction;
 internal class Program
@@ -55,7 +52,7 @@ internal class Program
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SNRReductionOptions>>().Value);
 
         // Register generic logging adapter so DI can inject ILog<T> where needed
-        builder.Services.AddSingleton(typeof(ILog<>), typeof(MSLoggerAdapter<>));
+        builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
         builder.Services.AddSingleton<SNRReductionApp>();
         builder.Services.AddSingleton<ISNRReductionService, SNRReductionService>();
         // CreateApplicationBuilder has already added the Console, Debug, EventLog, and EventSource loggers.

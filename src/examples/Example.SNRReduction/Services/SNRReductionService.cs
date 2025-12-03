@@ -1,6 +1,6 @@
 ﻿using Examples.SNRReduction.Interfaces;
 using Examples.SNRReduction.Models;
-using Example.SNRReduction.Logging;
+using AlsaSharp.Library.Logging;
 
 namespace Examples.SNRReduction.Services;
 
