@@ -1,14 +1,10 @@
-﻿using Alsa.Net;
-using Alsa.Net.Internal;
-using Example.SNRReduction;
-using Microsoft.Extensions.Configuration;
-using System.Text.Json;
+using Alsa.Net;
 
-namespace Example.SNRReduction
-{
-    internal class ProgramHelpers
+namespace Example.SNRReduction;
+
+public class SNRTools(ILogger<SNRTools> log)
     {
-
+        private readonly ILogger<SNRTools> _log = log;
         byte[] GenerateToneWav(int sampleRate, int channels, int bitsPerSample, double freq, int seconds, double amplitude)
         {
             using var ms = new MemoryStream();
@@ -105,6 +101,8 @@ namespace Example.SNRReduction
             return rmsList.Count == 0 ? 0.0 : rmsList.Average();
         }
 
-        
+    internal void Initialize()
+    {
+        _log.LogInformation("***** NR Tools initialized.");         
     }
 }

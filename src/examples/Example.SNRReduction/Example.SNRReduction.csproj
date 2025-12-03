@@ -1,23 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <LangVersion>Latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-Example.SNRReduction-88d7813f-4273-44c3-ad67-b348c6deac66</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.11" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Alsa.Net\Alsa.Net.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="9.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="9.0.11" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0" />
-    <PackageReference Include="Terminal.Gui" Version="1.9.0" />
-  </ItemGroup>
-
 </Project>

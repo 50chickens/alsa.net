@@ -1,67 +1,94 @@
-using System.Text.Json;
+using Examples.SNRReduction.Interfaces;
+using Examples.SNRReduction.Models;
+using Examples.SNRReduction.Services;
 using Microsoft.Extensions.Configuration;
-using Alsa.Net;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-using Alsa.Net.Internal;
-using System.Text.RegularExpressions;
-
-namespace Example.SNRReduction
+namespace Example.SNRReduction;
+internal class Program
 {
-    partial class Program
+    private static void Main(string[] args)
     {
-        static async Task<int> Main(string[] args)
+        var builder = Host.CreateApplicationBuilder(args);
+        // CreateApplicationBuilder has already:
+        // Set the content root to the path returned by GetCurrentDirectory().
+        // Loaded host configuration from:
+        //   Environment variables: AddEnvironmentVariables(prefix: "DOTNET_").
+        //   Command line arguments: AddCommandLine(args).
+        //
+        // Loaded app configuration from (for overriding app settings in order of lowest to highest priority):
+        //   appsettings.json: AddJsonFile("appsettings.json", optional: true, reloadOnChange: true).
+        //   appsettings.{Environment}.json: AddJsonFile($"appsettings.{Environment}.json", optional: true, reloadOnChange: true).
+        //   User secrets: AddUserSecrets(<assembly>, optional: true, reloadOnChange: true) if the current host environment is Development.
+        //      i.e. In Visual Studio, right-click on the project and select 'Manage User Secrets'.
+        //   Environment variables: AddEnvironmentVariables(), so app settings can be overridden using environment variables.
+        //      e.g. Variable name: weatherForecast:windSpeedUnit / Variable value: MPH
+        //   Command line arguments: AddCommandLine(args), so app settings can be overridden using CL arguments with nested app settings property names.
+        //      e.g. <appname>.exe --weatherForecast:numberOfDays 7 --weatherForecast:temperatureScale F --weatherForecast:windSpeedUnit MPH
+
+
+        // Allow app settings to be overridden via environment variables, e.g. WEATHER_weatherForecast:temperatureScale
+        // NOTE: Calling AddEnvironmentVariables again is unnecessary if not prefixing variables, e.g. weatherForecast:temperatureScale
+        builder.Configuration.AddEnvironmentVariables(prefix: "SNR_");
+
+        // Because AddEnvironmentVariables has been called above (superseding command line arguments), call AddCommandLine again.
+        // Allow app settings to be overridden via the command line using single dash or double dash arguments.
+        // e.g. <appname>.exe --autosweep (to run in Development environment add '--environment Development').
+        var switchMappings = new Dictionary<string, string>
         {
-            var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-                .AddCommandLine(args)
-                .Build();
+            { "--AutoSweep", "SNRReduction:AutoSweep" },
+            { "--AudioCardName", "SNRReduction:AudioCardName" }
+        };
+        builder.Configuration.AddCommandLine(args, switchMappings);
+        // NOTE: If AddCommandLine is called without switch mappings, command line arguments must match nested app settings property names.
+        // e.g. <appname>.exe --SNRReduction:AutoSweep true --SNRReduction:AudioCardName "MyAudioCard"
 
-            var config = configuration.Get<AppConfig>();
-            var baselineOnly = args.Any(a => a.Equals("--baseline", StringComparison.OrdinalIgnoreCase)) || configuration.GetValue<bool>("BaselineOnly");
+        // Use the Options pattern to bind app settings.  Validation is performed in WeatherForecastOptionsValidation.
+        builder.Services.AddOptions<SNRReductionOptions>().Bind(builder.Configuration.GetSection(SNRReductionOptions.Settings));
+        builder.Services.AddSingleton<IValidateOptions<SNRReductionOptions>, SNRReductionOptionsValidationService>();
+        // Register SNRReductionOptions by delegating to IOptions object to remove IOptions dependency.
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SNRReductionOptions>>().Value);
 
-            Console.WriteLine("Example.SNRReduction: running baseline measurement...");
-            
-            if (!new AlsaCardEnumerator().TryGetCards(out var cards))
-            {
-                Console.WriteLine("No ALSA sound cards found");
-                return 1;
-            }
+        builder.Services.AddSingleton<SNRReductionApp>();
+        builder.Services.AddSingleton<ISNRReductionService, SNRReductionService>();
+        // CreateApplicationBuilder has already added the Console, Debug, EventLog, and EventSource loggers.
+        // Add any additional logging configuration to what is specified in appsettings.{Environment}.json.
+        // e.g. builder.Logging.AddJsonConsole();
+        
+        builder.Logging.ClearProviders();
+        
+        using var host = builder.Build();
 
-            var chosenCard = cards.Where(c => Regex.IsMatch(c.Name, config.CardName, RegexOptions.IgnoreCase)).FirstOrDefault();
+        using var serviceScope = host.Services.CreateScope();
+        var serviceProvider = serviceScope.ServiceProvider;
 
-            if (chosenCard == null)
-            {
-                Console.Error.WriteLine($"Card matching {config.CardName} not found");
-                return 1;
-            }
+        ILogger<Program> logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+        Log.Logger.Information("Application starting...");
 
-            Console.WriteLine($"Using card {chosenCard.Name} (id={chosenCard.Index})");
-
-            var settings = new SoundDeviceSettings
-            {
-                PlaybackDeviceName = $"hw:CARD={chosenCard.Name}",
-                RecordingDeviceName = $"hw:CARD={chosenCard.Name}",
-                MixerDeviceName = $"hw:CARD={chosenCard.Name}",
-                RecordingSampleRate = 48000,
-                RecordingChannels = 2,
-                RecordingBitsPerSample = 16
-            };
-
-            using var device = AlsaDeviceBuilder.Create(settings);
-
-            Console.WriteLine("Measuring baseline noise (silence)...");
-            var baselineNoise = new ProgramHelpers().MeasureNoise(device, config.BaselineSeconds);
-            Console.WriteLine($"Baseline noise RMS: {baselineNoise:E3}");
-
-            Console.WriteLine("Measuring baseline signal (tone)...");
-            var baselineSignal = await new ProgramHelpers().MeasureSignalAsync(device, config.SignalSeconds, config.TestToneHz);
-            Console.WriteLine($"Baseline signal RMS: {baselineSignal:E3}");
-
-            var result = new { Card = chosenCard.Index, CardName = chosenCard.Name, BaselineNoise = baselineNoise, BaselineSignal = baselineSignal };
-            File.WriteAllText(config.ResultsFile, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-            Console.WriteLine($"Wrote baseline results to {config.ResultsFile}");
-
-            return 0;
+        try
+        {
+            serviceProvider.GetRequiredService<SNRReductionApp>().GetSNRReduction();
         }
+        catch (Exception ex)
+        {
+            Log.Logger.Fatal(ex, "Application exited unexpectedly.  See log file for details.");
+
+            if (ex is OptionsValidationException)
+            {
+                // Logger is configured to not write exceptions to the console, but write the validation errors to be more obvious.
+                Log.Logger.Fatal("Application exited due to invalid app settings:\r\n{ValidationErrors}", ex.Message.Replace("; ", Environment.NewLine));
+            }
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Press any key to exit application.");
+        Console.ReadKey();
     }
 }
