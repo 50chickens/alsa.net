@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Collections.Specialized;
 using NLog;
 using NLog.Config;
@@ -9,13 +8,13 @@ namespace Example.SNRReduction.Logging;
 public static class NLogExtensions
 {
     /// <summary>
-    /// Configure Common.Logging to use the NLog factory adapter from Alsa.Net.Core
+    /// Configure Common.Logging to use the NLog factory adapter from AlsaSharp.Core
     /// so calls to Common.Logging.LogManager.GetLogger(...) are backed by NLog.
     /// </summary>
     public static ILoggingBuilder AddNlogFactoryAdaptor(this ILoggingBuilder builder)
     {
         // Set the Common.Logging adapter to the project's NLog adapter.
-        Common.Logging.LogManager.Adapter = new Alsa.Net.Core.NLogLoggerFactoryAdapter(new NameValueCollection());
+        Common.Logging.LogManager.Adapter = new AlsaSharp.Library.Logging.NLogLoggerFactoryAdapter(new NameValueCollection());
         return builder;
     }
 

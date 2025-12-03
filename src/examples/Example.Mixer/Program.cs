@@ -1,4 +1,4 @@
-﻿using Alsa.Net;
+﻿using AlsaSharp;
 
 namespace Example.Mixer;
 

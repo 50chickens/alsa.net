@@ -1,4 +1,4 @@
-using Alsa.Net;
+using AlsaSharp;
 using Example.SNRReduction.Logging;
 
 namespace Example.SNRReduction;
