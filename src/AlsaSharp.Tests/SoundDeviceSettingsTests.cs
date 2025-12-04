@@ -1,4 +1,6 @@
 ﻿using AlsaSharp.Library.Logging;
+using AlsaSharp.Library.Logging.Tests;
+using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;

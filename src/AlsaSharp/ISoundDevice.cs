@@ -1,4 +1,5 @@
-﻿namespace AlsaSharp;
+﻿
+namespace AlsaSharp;
 
 /// <summary>
 /// virtual sound interface connected to configured hardware devices
@@ -80,7 +81,7 @@ public interface ISoundDevice : IDisposable
     void Record(uint second, Stream saveStream);
 
     /// <summary>
-    /// record wave data using the given callback mehtod every time new audio data is available
+    /// record wave data using the given callback method every time new audio data is available
     /// </summary>
     /// <param name="onDataAvailable">callback action called if new audio data is available</param>
     /// <param name="cancellationToken">token to cancel recording</param>

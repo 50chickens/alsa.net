@@ -1,9 +1,11 @@
 ﻿using AlsaSharp.Library.Logging;
+using AlsaSharp.Tests;
+using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 
-namespace AlsaSharp.Tests
+namespace AlsaSharp.Library.Logging.Tests
 {
     [TestFixture]
     public class NUnitLoggerTests

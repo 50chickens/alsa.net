@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
 
-namespace AlsaSharp.Tests
+
+namespace AlsaSharp.Tests.Library
 {
     public static class TestUtils
     {

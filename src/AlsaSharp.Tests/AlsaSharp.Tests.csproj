@@ -12,7 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AlsaSharp.Tests.NUnit\AlsaSharp.Tests.NUnit.csproj" />
+    <ProjectReference Include="..\AlsaSharp.Library.Logging.NUnit\AlsaSharp.Library.Logging.NUnit.csproj" />
+    <ProjectReference Include="..\AlsaSharp.Library.Logging.Tests\AlsaSharp.Library.Logging.Tests.csproj" />
     <ProjectReference Include="..\AlsaSharp\AlsaSharp.csproj" />
   </ItemGroup>
 

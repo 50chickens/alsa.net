@@ -1,4 +1,5 @@
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
@@ -16,7 +17,7 @@ namespace AlsaSharp.Tests
         {
             var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
-            _log = Library.Logging.LogManager.GetLogger<CardControlTests>();
+            _log = LogManager.GetLogger<CardControlTests>();
             _log.Info($"Logger initialized for {GetType().Name}.");
 
         }

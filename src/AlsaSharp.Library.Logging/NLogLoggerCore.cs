@@ -50,16 +50,7 @@ namespace AlsaSharp.Library.Logging
             var t = payload.GetType();
                 foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
-                    try
-                    {
                         dict[p.Name] = p.GetValue(payload);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Do not silently swallow reflection errors; record the exception text so the
-                        // caller can see why the property extraction failed.
-                        dict[p.Name] = ex.ToString();
-                    }
                 }
             return dict;
         }
