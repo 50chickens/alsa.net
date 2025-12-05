@@ -5,6 +5,10 @@ using Example.SNRReduction.Logging;
 using Microsoft.Extensions.Options;
 using NLog.Extensions.Logging;
 using AlsaSharp.Library.Logging;
+using Example.SNRReduction.Audio;
+using Example.SNRReduction.Extensions;
+using Example.SNRReduction.Models;
+using Example.SNRReduction.Services;
 
 namespace Example.SNRReduction;
 internal class Program
@@ -39,28 +43,54 @@ internal class Program
         var switchMappings = new Dictionary<string, string>
         {
             { "--AutoSweep", "SNRReduction:AutoSweep" },
-            { "--AudioCardName", "SNRReduction:AudioCardName" }
+            { "--AudioCardName", "SNRReduction:AudioCardName" },
+            { "--TerminalGui", "SNRReduction:TerminalGui" },
+            { "--GuiIntervalSeconds", "SNRReduction:GuiIntervalSeconds" }
         };
         builder.Configuration.AddCommandLine(args, switchMappings);
         // NOTE: If AddCommandLine is called without switch mappings, command line arguments must match nested app settings property names.
         // e.g. <appname>.exe --SNRReduction:AutoSweep true --SNRReduction:AudioCardName "MyAudioCard"
 
         // Use the Options pattern to bind app settings.  Validation is performed in WeatherForecastOptionsValidation.
-        builder.Services.AddOptions<SNRReductionOptions>().Bind(builder.Configuration.GetSection(SNRReductionOptions.Settings));
-        builder.Services.AddSingleton<IValidateOptions<SNRReductionOptions>, SNRReductionOptionsValidationService>();
+        builder.Services.AddOptions<SNRReductionServiceOptions>().Bind(builder.Configuration.GetSection(SNRReductionServiceOptions.Settings));
+
+        builder.Services.AddOptions<AudioLevelMeterRecorderServiceOptions>().Bind(builder.Configuration.GetSection(AudioLevelMeterRecorderServiceOptions.Settings));
+        builder.Services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
         // Register SNRReductionOptions by delegating to IOptions object to remove IOptions dependency.
-        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SNRReductionOptions>>().Value);
+        //builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
 
         // Register generic logging adapter so DI can inject ILog<T> where needed
         builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
+        
+
+//register audio level meter recorder service
+        builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
+
+        builder.Services.AddSingleton<AudioInterfaceLevelMeter>();
+        builder.Services.AddSingleton<IAudioInterfaceLevelMeter>(sp => sp.GetRequiredService<AudioInterfaceLevelMeter>());
         builder.Services.AddSingleton<SNRReductionApp>();
         builder.Services.AddSingleton<ISNRReductionService, SNRReductionService>();
+        
+        builder.Services.AddSingleton<TerminalGuiRunner>();
+        builder.Services.AddSingleton<AudioLevelMeterRecorderService>();
+        builder.Services.AddSingleton<AudioInterfaceLevelMeter>();
+        
         // CreateApplicationBuilder has already added the Console, Debug, EventLog, and EventSource loggers.
         // Add any additional logging configuration to what is specified in appsettings.{Environment}.json.
         // e.g. builder.Logging.AddJsonConsole();
         
         builder.Logging.ClearProviders();
-        // add NLog provider, apply minimal programmatic config, and wire Common.Logging adapter
+        // set host logging to Trace so we capture detailed sweep diagnostics
+        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        
+        //inject configuration of the audio card name into the AudioService to be used by AudioInterfaceLevelMeter
+
+        
+        builder.Services.AddAudioService(options =>
+        {
+            var snrOptions = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
+                
+        });
         builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
         using var host = builder.Build();
 
@@ -68,11 +98,24 @@ internal class Program
         var serviceProvider = serviceScope.ServiceProvider;
 
         var logger = serviceProvider.GetRequiredService<ILog<Program>>();
+        var options = serviceProvider.GetRequiredService<SNRReductionServiceOptions>();
         // get an ILog<T> from DI (wrapped around ILogger<T>)
 
         logger.Info("Application starting...");
-        serviceProvider.GetRequiredService<SNRReductionApp>().GetSNRReduction();
+
+        // if (options.TerminalGui)
+        // {
+        //     // Run interactive terminal GUI mode
+        //     serviceProvider.GetRequiredService<TerminalGuiRunner>().Run(options);
+        // }
+        // else
+        // {
+            serviceProvider.GetRequiredService<SNRReductionApp>().Run();
+        //}
+
         logger.Info("Application finished.");
         
     }
+    
 }
+

@@ -3,10 +3,10 @@ using Microsoft.Extensions.Options;
 
 namespace Examples.SNRReduction.Services;
 
-public class SNRReductionOptionsValidationService : IValidateOptions<SNRReductionOptions>
+public class SNRReductionOptionsValidationService : IValidateOptions<SNRReductionServiceOptions>
 {
     
-    public ValidateOptionsResult Validate(string name, SNRReductionOptions options)
+    public ValidateOptionsResult Validate(string name, SNRReductionServiceOptions options)
     {
         // var failures = new List<string>();
 

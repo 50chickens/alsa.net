@@ -32,7 +32,8 @@ public static class NLogExtensions
             Layout = "${longdate}|${level:uppercase=true}|${logger:shortName=true}|${message}${onexception:${newline}${exception:format=tostring}}"
         };
         nlogConfig.AddTarget(consoleTarget);
-        nlogConfig.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, consoleTarget);
+        // enable very verbose logging for diagnostic and sweep steps
+        nlogConfig.AddRule(NLog.LogLevel.Trace, NLog.LogLevel.Fatal, consoleTarget);
         LogManager.Configuration = nlogConfig;
 
         return builder;
