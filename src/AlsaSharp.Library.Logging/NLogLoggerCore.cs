@@ -33,12 +33,16 @@ namespace AlsaSharp.Library.Logging
 
         private LogEventInfo CreateEvent(LogLevel level, object? payload, string? message)
         {
-            var evt = new LogEventInfo(level, _logger.Name, message ?? string.Empty);
+            var messageStr = message;
+            if (messageStr == null) messageStr = string.Empty;
+            var evt = new LogEventInfo(level, _logger.Name, messageStr);
             if (payload != null)
             {
                 foreach (var kv in ToDictionary(payload))
                 {
-                    evt.Properties[kv.Key] = kv.Value ?? string.Empty;
+                    var v = kv.Value;
+                    if (v == null) v = string.Empty;
+                    evt.Properties[kv.Key] = v;
                 }
             }
             return evt;

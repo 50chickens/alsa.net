@@ -1,4 +1,4 @@
-﻿using AlsaSharp.Internal;
+using AlsaSharp.Internal;
 
 namespace AlsaSharp;
 

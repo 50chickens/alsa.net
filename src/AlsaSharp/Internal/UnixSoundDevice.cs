@@ -1,4 +1,5 @@
-﻿namespace AlsaSharp.Internal;
+﻿
+namespace AlsaSharp.Internal;
 
 class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 {
@@ -17,7 +18,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
     IntPtr _playbackPcm;
     IntPtr _recordingPcm;
     IntPtr _mixer;
-    IntPtr _mixelElement;
+    IntPtr _mixerElement;
     bool _wasDisposed;
 
     public void Play(string wavPath)
@@ -217,8 +218,8 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
     {
         OpenMixer();
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, volume), ExceptionMessages.CanNotSetVolume);
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, volume), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, volume), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, volume), ExceptionMessages.CanNotSetVolume);
 
         CloseMixer();
     }
@@ -230,11 +231,11 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         OpenMixer();
 
-        if (InteropAlsa.snd_mixer_selem_has_playback_volume(_mixelElement) == 0)
+        if (InteropAlsa.snd_mixer_selem_has_playback_volume(_mixerElement) == 0)
             throw new AlsaDeviceException(ExceptionMessages.CanNotSetVolume + " - element does not support playback volume");
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, &volumeLeft), ExceptionMessages.CanNotSetVolume);
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, &volumeRight), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, &volumeLeft), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, &volumeRight), ExceptionMessages.CanNotSetVolume);
 
         CloseMixer();
 
@@ -245,8 +246,8 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
     {
         OpenMixer();
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_capture_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, volume), ExceptionMessages.CanNotSetVolume);
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_capture_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, volume), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_capture_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, volume), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_capture_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, volume), ExceptionMessages.CanNotSetVolume);
 
         CloseMixer();
     }
@@ -258,8 +259,8 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         OpenMixer();
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_capture_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, &volumeLeft), ExceptionMessages.CanNotSetVolume);
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_capture_volume(_mixelElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, &volumeRight), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_capture_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, &volumeLeft), ExceptionMessages.CanNotSetVolume);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_get_capture_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, &volumeRight), ExceptionMessages.CanNotSetVolume);
 
         CloseMixer();
 
@@ -272,7 +273,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         OpenMixer();
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_switch_all(_mixelElement, isMute ? 0 : 1), ExceptionMessages.CanNotSetMute);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_switch_all(_mixerElement, isMute ? 0 : 1), ExceptionMessages.CanNotSetMute);
 
         CloseMixer();
     }
@@ -283,7 +284,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
         OpenMixer();
 
-        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_switch_all(_mixelElement, isMute ? 0 : 1), ExceptionMessages.CanNotSetMute);
+        ThrowErrorMessage(InteropAlsa.snd_mixer_selem_set_playback_switch_all(_mixerElement, isMute ? 0 : 1), ExceptionMessages.CanNotSetMute);
 
         CloseMixer();
     }
@@ -302,8 +303,10 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         if (_playbackPcm == default)
             return;
 
-        ThrowErrorMessage(InteropAlsa.snd_pcm_drain(_playbackPcm), ExceptionMessages.CanNotDropDevice);
-        ThrowErrorMessage(InteropAlsa.snd_pcm_close(_playbackPcm), ExceptionMessages.CanNotCloseDevice);
+        var rc = InteropAlsa.snd_pcm_drain(_playbackPcm);
+        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop playback device: {InteropAlsa.StrError(rc)}");
+        rc = InteropAlsa.snd_pcm_close(_playbackPcm);
+        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close playback device: {InteropAlsa.StrError(rc)}");
 
         _playbackPcm = default;
     }
@@ -322,8 +325,10 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         if (_recordingPcm == default)
             return;
 
-        ThrowErrorMessage(InteropAlsa.snd_pcm_drain(_recordingPcm), ExceptionMessages.CanNotDropDevice);
-        ThrowErrorMessage(InteropAlsa.snd_pcm_close(_recordingPcm), ExceptionMessages.CanNotCloseDevice);
+        var rc = InteropAlsa.snd_pcm_drain(_recordingPcm);
+        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop recording device: {InteropAlsa.StrError(rc)}");
+        rc = InteropAlsa.snd_pcm_close(_recordingPcm);
+        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close recording device: {InteropAlsa.StrError(rc)}");
 
         _recordingPcm = default;
     }
@@ -342,7 +347,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
             ThrowErrorMessage(InteropAlsa.snd_mixer_selem_register(_mixer, IntPtr.Zero, IntPtr.Zero), ExceptionMessages.CanNotRegisterMixer);
             ThrowErrorMessage(InteropAlsa.snd_mixer_load(_mixer), ExceptionMessages.CanNotLoadMixer);
 
-            _mixelElement = InteropAlsa.snd_mixer_first_elem(_mixer);
+            _mixerElement = InteropAlsa.snd_mixer_first_elem(_mixer);
         }
     }
 
@@ -356,7 +361,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
             ThrowErrorMessage(InteropAlsa.snd_mixer_close(_mixer), ExceptionMessages.CanNotCloseMixer);
 
             _mixer = default;
-            _mixelElement = default;
+            _mixerElement = default;
         }
     }
 
@@ -383,4 +388,11 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         throw new AlsaDeviceException($"{message}. Error {errno}. {errorMsg}.");
     }
 
+    public int SetSimpleElementValue(string simpleElementName, string channelName, nint value)
+    {
+        OpenMixer();
+        var rv = InteropAlsa.snd_mixer_selem_set_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, value);
+        CloseMixer();
+        return rv;
+    }   
 }

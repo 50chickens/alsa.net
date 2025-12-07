@@ -6,11 +6,9 @@ namespace AlsaSharp.Internal
     /// <summary>
     /// Represents an ALSA sound card.
     /// </summary>
-    public class Card
+    public class SoundDeviceManager : IAlsaSoundDeviceManager
     {
-        private int _index;
-        private string _name;
-        private readonly ILog<Card> _log;
+        private readonly ILog<IAlsaSoundDeviceManager> _log;
 
         /// <summary>
         /// Creates a new instance of the Card class.
@@ -18,28 +16,23 @@ namespace AlsaSharp.Internal
         /// <param name="log">Logger instance scoped to this type.</param>
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
-        public Card(ILog<Card> log, int index, string name)
+        public SoundDeviceManager(ILog<IAlsaSoundDeviceManager> log, int index, string name)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
-            _index = index;
-            _name = name;
+            
         }
-        /// <summary>
-        /// Id of the sound card.
-        /// </summary>
-        public int Index => _index;
-        /// <summary>
-        /// Name of the sound card.
-        /// </summary>
-        public string Name => _name;
-
+        
         /// <summary>
         /// Enumerate mixer controls for this card using libasound APIs.
         /// Returns an array of MixerControlInfo with basic channel raw values and ranges.
         /// </summary>
-        public MixerControlInfo[] GetMixerControls()
+        public List<MixerSimpleElement> GetMixerSimpleElements(ISoundDevice soundDevice)
         {
-            var list = new List<MixerControlInfo>();
+            soundDevice = soundDevice ?? throw new ArgumentNullException(nameof(soundDevice));
+            //int _index = soundDevice.Settings;
+            string mixerDeviceName = soundDevice.Settings.MixerDeviceName;
+
+            var list = new List<MixerSimpleElement>();
             IntPtr mixer = IntPtr.Zero;
             Exception? primaryEx = null;
             try
@@ -49,10 +42,13 @@ namespace AlsaSharp.Internal
                 if (rc < 0) throw new InvalidOperationException($"snd_mixer_open failed: {InteropAlsa.StrError(rc)}");
 
                 // Prefer attaching mixer by card short name when available
-                // (e.g. "hw:CARD=IQaudIOCODEC"). If we don't have a name,
-                // attach by numeric id (e.g. "hw:0"). Using the short name
-                // matches what `aplay -L` shows on many systems.
-                string attachName = !string.IsNullOrEmpty(_name) ? $"hw:CARD={_name}" : $"hw:{_index}";
+                // (e.g. "hw:CARD=IQaudIOCODEC"). If the MixerDeviceName
+                // already contains the full ALSA device spec (starts with
+                // "hw:"), use it directly; otherwise, assume it is a card
+                // short name and construct the attach string.
+                string attachName = mixerDeviceName.StartsWith("hw:", StringComparison.OrdinalIgnoreCase)
+                    ? mixerDeviceName
+                    : $"hw:CARD={mixerDeviceName}";
 
                 rc = InteropAlsa.snd_mixer_attach(mixer, attachName);
                 if (rc < 0) throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(rc)}");
@@ -67,8 +63,10 @@ namespace AlsaSharp.Internal
                 while (elem != IntPtr.Zero)
                 {
                     var namePtr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                    string controlName = namePtr != IntPtr.Zero ? Marshal.PtrToStringUTF8(namePtr) ?? string.Empty : string.Empty;
-                    var channels = new List<MixerControlChannelInfo>();
+                    if (namePtr == IntPtr.Zero) throw new InvalidOperationException("Mixer element name pointer is null");
+                    var simpleElementName = Marshal.PtrToStringUTF8(namePtr);
+                    if (simpleElementName == null) throw new InvalidOperationException("Mixer element name is null");
+                    var channels = new List<MixerSimpleElement>();
 
                     // check common channels (front left/right and mono)
                     var channelIds = new[] { snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, snd_mixer_selem_channel_id.SND_MIXER_SCHN_MONO };
@@ -82,7 +80,7 @@ namespace AlsaSharp.Internal
                         if (hasVolume <= 0)
                         {
                             // Element reports playback channel but not volume; skip.
-                            _log.Warn($"[ALSA] control='{controlName}' has playback channel but no playback volume support; skipping channel={ch}.");
+                            _log.Warn($"[ALSA] simpleElement='{simpleElementName}' has playback channel but no playback volume support; skipping channel={ch}.");
                             continue;
                         }
 
@@ -95,7 +93,7 @@ namespace AlsaSharp.Internal
                             rc = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, ch, &raw);
                             if (rc < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{controlName}' channel={ch}: {InteropAlsa.StrError(rc)}");
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(rc)}");
                                 continue;
                             }
 
@@ -103,15 +101,15 @@ namespace AlsaSharp.Internal
                             rc = InteropAlsa.snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
                             if (rc < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{controlName}' channel={ch}: {InteropAlsa.StrError(rc)}");
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(rc)}");
                                 continue;
                             }
 
-                            channels.Add(new MixerControlChannelInfo(ch.ToString(), raw, min, max, null, null));
+                            channels.Add(new MixerSimpleElement(simpleElementName, raw, min, max, null, null));
                         }
                     }
 
-                    list.Add(new MixerControlInfo(controlName, channels.ToArray()));
+                    var simpleElement = channels.FirstOrDefault();
 
                     elem = InteropAlsa.snd_mixer_elem_next(elem);
                 }
@@ -137,7 +135,17 @@ namespace AlsaSharp.Internal
                 }
             }
 
-            return list.ToArray();
+            return list;
         }
+
+        // public List<MixerSimpleElement> GetMixerSimpleElementsForSoundDevice(int id)
+        // {
+        //     throw new NotImplementedException();
+        // }
+
+        // public ISoundDevice GetSoundDeviceByName(string cardName)
+        // {
+        //     throw new NotImplementedException();
+        // }
     }
 }

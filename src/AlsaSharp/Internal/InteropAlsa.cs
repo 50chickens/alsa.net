@@ -110,6 +110,11 @@ internal static class InteropAlsa
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern IntPtr snd_mixer_elem_next(IntPtr elem);
 
+    /// <summary>
+    /// Gets the name of the given mixer simple element.
+    /// </summary>
+    /// <param name="elem"></param>
+    /// <returns></returns>
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern IntPtr snd_mixer_selem_get_name(IntPtr elem);
 
@@ -187,4 +192,90 @@ internal static class InteropAlsa
     public static extern unsafe int snd_mixer_selem_get_capture_dB(IntPtr elem, snd_mixer_selem_channel_id channel, long* value);
 
     public static string StrError(int errno) => Marshal.PtrToStringUTF8(snd_strerror(errno)) ?? $"errno {errno}";
+
+    //private string GetHintValue(IntPtr hint, string key)
+    // {
+    //     IntPtr valuePtr = InteropAlsa.snd_device_name_get_hint(hint, key);
+    //     if (valuePtr == IntPtr.Zero)
+    //         return null;
+    //     return Marshal.PtrToStringAnsi(valuePtr);
+    // }
+
+    //implement other ALSA functions as needed - eg InteropAlsa.snd_device_name_get_hint;
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_device_name_hint(int card, string iface, out IntPtr hints);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_device_name_free_hint(IntPtr hints);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_device_name_get_hint(IntPtr hint, string key);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_open(out IntPtr ctl, string name, int mode);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_close(IntPtr ctl);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_card_info_malloc(out IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_ctl_card_info_free(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_card_info(IntPtr ctl, IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_id(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_driver(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_name(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_longname(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_mixername(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_ctl_card_info_get_components(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_pcm_next_device(IntPtr ctl, ref int device);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_pcm_info(IntPtr ctl, IntPtr pcminfo);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_info_malloc(out IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_pcm_info_free(IntPtr info);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_info_set_device(IntPtr pcmInfo, int device);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_info_set_subdevice(IntPtr pcmInfo, int subdevice);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_info_set_stream(IntPtr pcmInfo, snd_pcm_stream_t stream);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_pcm_info_get_id(IntPtr pcmInfo);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_pcm_info_get_name(IntPtr pcmInfo);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern IntPtr snd_pcm_info_get_subdevice_name(IntPtr pcmInfo);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_info_get_subdevices_count(IntPtr pcmInfo);
+
 }

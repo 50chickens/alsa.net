@@ -1,9 +1,9 @@
 using AlsaSharp;
-using Examples.SNRReduction.Models;
+using Example.SNRReduction.Models;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Audio;
 using System.Threading;
-using Examples.SNRReduction.Services;
+using Example.SNRReduction.Services;
 
 namespace Example.SNRReduction;
 

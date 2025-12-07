@@ -1,7 +1,7 @@
 using Example.SNRReduction.Audio;
 using Example.SNRReduction.Models;
 
-namespace Examples.SNRReduction.Services;
+namespace Example.SNRReduction.Services;
 
 public interface IAudioLevelMeterRecorderService
 {

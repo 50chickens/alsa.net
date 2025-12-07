@@ -65,7 +65,8 @@ namespace AlsaSharp.Internal
 					return new DiagnosticResult<string>(true, string.Empty, null);
 				}
 
-				var s = Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
+				var s = Marshal.PtrToStringUTF8(ptr);
+				if (s == null) return new DiagnosticResult<string>(true, string.Empty, null);
 				return new DiagnosticResult<string>(true, s, null);
 			}
 			catch (Exception ex)

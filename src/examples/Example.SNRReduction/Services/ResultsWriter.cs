@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 
-namespace Examples.SNRReduction.Services;
+namespace Example.SNRReduction.Services;
 
 public class ResultsWriter
 {

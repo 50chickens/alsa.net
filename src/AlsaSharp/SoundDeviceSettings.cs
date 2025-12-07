@@ -3,7 +3,7 @@
 /// <summary>
 /// settings on how to connect to and use your alsa devices
 /// </summary>
-public class SoundDeviceSettings
+public class SoundDeviceSettings()
 {
     /// <summary>
     /// name of the playback device to use. Default: "default"
@@ -21,10 +21,10 @@ public class SoundDeviceSettings
     public string MixerDeviceName { get; set; } = "default";
 
     /// <summary>
-    /// sample rate to use for recording. Default: 8000
+    /// sample rate to use for recording. Default: 48000
     /// </summary>
     /// <remarks>check your device specification for supported rates</remarks>
-    public uint RecordingSampleRate { get; set; } = 8000;
+    public uint RecordingSampleRate { get; set; } = 48000;
 
     /// <summary>
     /// number of chanels to use for recording. Default: 2

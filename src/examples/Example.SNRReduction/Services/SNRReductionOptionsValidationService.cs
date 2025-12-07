@@ -1,7 +1,7 @@
-using Examples.SNRReduction.Models;
+using Example.SNRReduction.Models;
 using Microsoft.Extensions.Options;
 
-namespace Examples.SNRReduction.Services;
+namespace Example.SNRReduction.Services;
 
 public class SNRReductionOptionsValidationService : IValidateOptions<SNRReductionServiceOptions>
 {

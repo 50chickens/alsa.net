@@ -1,4 +1,4 @@
-namespace Examples.SNRReduction.Services;
+namespace Example.SNRReduction.Services;
 
 public class AudioLevelMeterRecorderServiceOptions()
 {

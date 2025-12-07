@@ -9,6 +9,7 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
     private const double noiseFloor = -120.0;
     private readonly ISoundDevice _device = device;
     private readonly ILog<AudioInterfaceLevelMeter> _log = log;
+    private readonly object _recordLock = new object();
     /// <summary>
     /// Measure per-channel RMS and return dBFS values for left and right channels.
     /// </summary>
@@ -34,14 +35,30 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
             }
         }
 
-        var task = Task.Run(() => _device.Record(OnData, cts.Token));
-        try 
+        Task? task = null;
+        try
         {
-            task.Wait(cts.Token);
-        } 
-        catch 
+            lock (_recordLock)
+            {
+                task = Task.Run(() => _device.Record(OnData, cts.Token));
+                task.Wait(cts.Token);
+            }
+        }
+        catch (OperationCanceledException)
         {
-        _log?.Warn("Recording task was cancelled or failed.");
+            // expected when token cancels; avoid spamming logs with expected cancellations
+        }
+        catch (AlsaSharp.Internal.AlsaDeviceException ex)
+        {
+            _log?.Warn($"Recording task failed: {ex.Message}");
+        }
+        catch (AggregateException ae)
+        {
+            _log?.Warn($"Recording task aggregate failure: {ae.InnerException?.Message}");
+        }
+        catch (Exception ex)
+        {
+            _log?.Warn($"Recording unexpected failure: {ex.Message}");
         }
 
         if (samples == 0)

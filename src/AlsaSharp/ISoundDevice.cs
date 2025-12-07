@@ -1,4 +1,6 @@
 ﻿
+using AlsaSharp.Internal;
+
 namespace AlsaSharp;
 
 /// <summary>
@@ -86,4 +88,7 @@ public interface ISoundDevice : IDisposable
     /// <param name="onDataAvailable">callback action called if new audio data is available</param>
     /// <param name="cancellationToken">token to cancel recording</param>
     void Record(Action<byte[]> onDataAvailable, CancellationToken cancellationToken);
+
+    public int SetSimpleElementValue(string controlName, string channelName, nint value);
+    
 }

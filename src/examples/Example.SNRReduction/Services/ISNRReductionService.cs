@@ -1,8 +1,10 @@
-﻿using Examples.SNRReduction.Models;
+﻿using AlsaSharp;
+using AlsaSharp.Internal;
+using Example.SNRReduction.Services;
 
-namespace Examples.SNRReduction.Interfaces;
+namespace Example.SNRReduction.Interfaces;
 
-public interface ISNRReductionService
+public interface IControlSweepService
 {
-    
+    //public List<SNRSweepResult> SweepControl(AudioCardMixerService probe, int cardIndex, string controlName, MixerControlInfo ch, SoundDeviceSettings soundSettings);
 }

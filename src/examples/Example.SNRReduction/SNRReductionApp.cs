@@ -1,16 +1,14 @@
 ﻿using System.Text.Json;
 using AlsaSharp.Library.Logging;
-using Example.SNRReduction.Audio;
 using Example.SNRReduction.Models;
-using Examples.SNRReduction.Interfaces;
-using Examples.SNRReduction.Models;
-using Examples.SNRReduction.Services;
+using Example.SNRReduction.Interfaces;
+using Example.SNRReduction.Services;
 namespace Example.SNRReduction;
 
-public class SNRReductionApp(ILog<SNRReductionApp> log, ISNRReductionService snrReductionService, SNRReductionServiceOptions options, IAudioLevelMeterRecorderService audioLevelMeterRecorderService)
+public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService controlSweepService, SNRReductionServiceOptions options, IAudioLevelMeterRecorderService audioLevelMeterRecorderService)
 {
     private readonly ILog<SNRReductionApp> _log = log;
-    private ISNRReductionService _snrReductionService = snrReductionService;
+    private IControlSweepService _controlSweepService = controlSweepService;
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService;
     private string fileNameToStoreMeasurements = "";
     private MeasurementResult _measurementResults = new MeasurementResult(DateTime.UtcNow, DateTime.UtcNow, TimeSpan.Zero, TimeSpan.Zero, string.Empty);
@@ -43,13 +41,13 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, ISNRReductionService snr
         return measurementResults;
     }
 
-    private void SaveMeasurement(string fileName, List<AudioMeterLevelReading> measurementResults)
-    {
-        var opts = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(measurementResults, opts);
-        File.WriteAllText(fileName, json);
-        _log.Debug($"Baseline written to {fileName}");
-    }
+    // private void SaveMeasurement(string fileName, List<AudioMeterLevelReading> measurementResults)
+    // {
+    //     var opts = new JsonSerializerOptions { WriteIndented = true };
+    //     var json = JsonSerializer.Serialize(measurementResults, opts);
+    //     File.WriteAllText(fileName, json);
+    //     _log.Debug($"Baseline written to {fileName}");
+    // }
     // public void FindBestLevelsForControls(SNRReductionServiceOptions options)
     // {
     //     _log.Info($"Performing SNR Reduction using Audio Card: {options.AudioCardName}, AutoSweep: {options.AutoSweep}");

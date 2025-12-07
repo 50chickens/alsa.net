@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Examples.SNRReduction.Models;
+namespace Example.SNRReduction.Models;
 
 public class SNRReductionServiceOptions
 {

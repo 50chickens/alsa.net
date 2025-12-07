@@ -34,7 +34,9 @@ namespace AlsaSharp.Internal
             while (elem != IntPtr.Zero)
             {
                 var ptr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                var nm = ptr != IntPtr.Zero ? System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr) ?? string.Empty : string.Empty;
+                if (ptr == IntPtr.Zero) { elem = NextElem(elem); continue; }
+                var nm = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr);
+                if (nm == null) { elem = NextElem(elem); continue; }
                 if (string.Equals(nm, name, StringComparison.Ordinal)) return elem;
                 elem = NextElem(elem);
             }
