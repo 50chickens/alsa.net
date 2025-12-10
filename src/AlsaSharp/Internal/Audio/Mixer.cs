@@ -1,4 +1,4 @@
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
     /// Lightweight placeholder for ALSA mixer related helpers.

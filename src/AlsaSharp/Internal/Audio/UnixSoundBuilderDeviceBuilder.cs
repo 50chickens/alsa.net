@@ -3,7 +3,7 @@
 namespace AlsaSharp.Internal.Audio;
 
 /// <summary>
-/// connect your sound device configuration to a virtual interface
+/// Connect your sound device configuration to a virtual interface.
 /// </summary>
 public class UnixSoundDeviceBuilder
 {
@@ -13,7 +13,6 @@ public class UnixSoundDeviceBuilder
     /// <returns>Sound device instances ready to use.</returns>
     public static IEnumerable<ISoundDevice> Build()
     {
-        
         return GetSoundDevices();
     }
     private static IEnumerable<ISoundDevice> GetSoundDevices()
@@ -38,7 +37,7 @@ public class UnixSoundDeviceBuilder
             {
                 var name = Marshal.PtrToStringUTF8(namePtr);
                 if (name == null) throw new InvalidOperationException($"Could not retrieve card name for index {cardIndex}");
-                //create a new UnixSoundDevice for each card found
+                // Create a new UnixSoundDevice for each card found
                 var soundDeviceSettings = new SoundDeviceSettings
                 {
                     RecordingDeviceName = $"hw:CARD={name}",
@@ -50,7 +49,7 @@ public class UnixSoundDeviceBuilder
             }
             finally
             {
-                // free memory allocated by the ALSA helper
+                // Free memory allocated by the ALSA helper
                 if (namePtr != IntPtr.Zero)
                     InteropAlsa.free(namePtr);
             }
@@ -62,16 +61,4 @@ public class UnixSoundDeviceBuilder
 
         return list;
     }
-
-    // public static ISoundDevice Build(SoundDeviceSettings soundSettings)
-    // {
-    //     return new UnixSoundDevice(soundSettings);
-    // }
 }
-
-// public class SoundDeviceOptions
-// {
-//     public string RecordingDeviceName { get; set; } = "default";
-//     public string MixerDeviceName { get; set; } = "default";
-//     public string PlaybackDeviceName { get; set; } = "default";
-// }

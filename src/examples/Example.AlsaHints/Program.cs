@@ -1,13 +1,16 @@
-using Example.AlsaHints;
+using AlsaSharp.Library.Extensions;
 
-class Program
+namespace Example.AlsaHints
 {
-    static void Main(string[] args)
+    class Program
     {
-        var builder = Host.CreateApplicationBuilder(args);
-        builder.Services.AddHostedService<AlsaHintWorker>();
-        builder.Services.AddHintService(HintServiceBuilder.Build);
-        var host = builder.Build();        
-        host.Run();
+        static void Main(string[] args)
+        {
+            var builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddHostedService<AlsaHintWorker>();
+            builder.Services.AddHintService(HintServiceBuilder.Build);
+            var host = builder.Build();
+            host.Run();
+        }
     }
 }

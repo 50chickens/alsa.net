@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
     /// Encapsulates logic to set mixer control values (volume/switch) on elements.

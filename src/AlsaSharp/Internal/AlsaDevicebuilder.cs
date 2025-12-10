@@ -1,17 +1,15 @@
-using AlsaSharp.Internal;
-
-namespace AlsaSharp;
+namespace AlsaSharp.Internal;
 
 /// <summary>
-/// connect your sound device configuration to a virtual interface
+/// Connect your sound device configuration to a virtual interface.
 /// </summary>
 public static class AlsaDeviceBuilder
 {
     /// <summary>
-    /// create and connect a sound device.
-    /// use <see cref="SoundDeviceSettings"/> for parameter set up.
+    /// Build a sound device.
+    /// Use <see cref="SoundDeviceSettings"/> for parameter set up.
     /// </summary>
-    /// <param name="settings">sound device configuration to use</param>
-    /// <returns>sound device ready to use</returns>
-    public static ISoundDevice Create(SoundDeviceSettings settings) => new UnixSoundDevice(settings);
+    /// <param name="settings">Sound device configuration to use.</param>
+    /// <returns>Sound device ready to use.</returns>
+    public static ISoundDevice Build(SoundDeviceSettings settings) => new UnixSoundDevice(settings);
 }

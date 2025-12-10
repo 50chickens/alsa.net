@@ -1,8 +1,4 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.IO;
 using AlsaSharp.Internal.Audio;
 
 namespace Example.AlsaHints;
@@ -20,9 +16,10 @@ public class AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintSe
     {
         try
         {
-            // Produce canonical JSON to stdout (no --outdir option)
             var options = new JsonSerializerOptions { WriteIndented = true };
+            _log.LogInformation("Getting ALSA cards...");
             var cards = _alsaHintService.GetAlsactlCards();
+            _log.LogInformation("Getting ALSA hints...");
             var hints = _alsaHintService.GetCanonicalHints();
             var combined = new { Alsactl = cards, Hints = hints };
             Console.WriteLine(JsonSerializer.Serialize(combined, options));

@@ -1,10 +1,12 @@
 using AlsaSharp.Internal.Audio;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-namespace Example.AlsaHints
+namespace AlsaSharp.Library.Extensions
 {
     public static class HintServiceBuilder
     {
-        internal static IHintService Build(IServiceProvider services)
+        public static IHintService Build(IServiceProvider services)
         {
             var logger = services.GetService<ILogger<HintService>>();
             return new HintService(logger);

@@ -1,6 +1,6 @@
 using System;
 
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
     /// Lightweight wrapper around a libasound mixer handle for a given card.

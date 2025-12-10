@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlsaSharp.Tests.Library", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.AlsaHints", "examples\Example.AlsaHints\Example.AlsaHints.csproj", "{50C76834-AE0A-41CF-A55C-C3ADBD4AE772}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlsaSharp.Library.Extensions", "AlsaSharp.Library.Extensions\AlsaSharp.Library.Extensions.csproj", "{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -227,6 +229,18 @@ Global
 		{50C76834-AE0A-41CF-A55C-C3ADBD4AE772}.Release|x64.Build.0 = Release|Any CPU
 		{50C76834-AE0A-41CF-A55C-C3ADBD4AE772}.Release|x86.ActiveCfg = Release|Any CPU
 		{50C76834-AE0A-41CF-A55C-C3ADBD4AE772}.Release|x86.Build.0 = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|x64.Build.0 = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Debug|x86.Build.0 = Debug|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|x64.ActiveCfg = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|x64.Build.0 = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|x86.ActiveCfg = Release|Any CPU
+		{A7A851FD-B7D2-8988-DB3F-FE3C354AF8D1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
 ﻿using AlsaSharp;
+using AlsaSharp.Internal;
 
 namespace Example.Configuration;
 
@@ -19,7 +20,7 @@ class Program
         };
 
         // create virtual interface to use your config
-        using var alsaDevice = AlsaDeviceBuilder.Create(config);
+        using var alsaDevice = AlsaDeviceBuilder.Build(config);
 
         // do something with your device e.g. record and play something
         // alsaDevice.Record(10, "output.wav");
