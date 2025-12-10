@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Example.AlsaHints;
 
@@ -22,16 +23,7 @@ public class AlsaHintWorker : BackgroundService
         // Prefer Console.WriteLine for terse output rather than the default log prefix
         try
         {
-            foreach (var hint in _alsaHintService.Hints)
-            {
-                Console.WriteLine(hint.Name);
-                Console.WriteLine($"    {hint.CardId}, {hint.LongName}");
-                Console.WriteLine($"    {hint.Description}");
-                if (!string.IsNullOrWhiteSpace(hint.IOID)) Console.WriteLine($"    IOID: {hint.IOID}");
-                Console.WriteLine();
-            }
-            // ensure the console output has time to flush
-            await Task.Delay(25, stoppingToken);
+            _log.LogInformation(JsonConvert.SerializeObject(_alsaHintService.Hints, Formatting.Indented));
         }
         finally
         {

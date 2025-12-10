@@ -1,32 +1,22 @@
 using Example.AlsaHints;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
-internal class Program
+class Program
 {
-    private static void Main(string[] args)
+    static void Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddHostedService<AlsaHintWorker>();
         builder.Services.AddAlsaHintService(services =>
         {
-            return AlsaHintServiceBuilder.Build();
+                        //fix this error:
+            ///home/pistomp/alsa.net/src/examples/Example.AlsaHints/Program.cs(11,43): error CS7036: There is no argument given that corresponds to the required parameter 'services' of 'AlsaHintServiceBuilder.Build(IServiceProvider)'
+            /// 
+
+
+            return AlsaHintServiceBuilder.Build(services); //
+
         } );
-        // Remove the default logging providers so the example prints only friendly output
-        // (prevents the default prefix messages such as "info: Example.AlsaHints.AlsaHintWorker[0]")
-        builder.Logging.ClearProviders();
-        builder.Logging.SetMinimumLevel(LogLevel.None);
         var host = builder.Build();        
         host.Run();
-    }
-
-}
-
-public static class AlsaHintServiceExtensions
-{
-    public static IServiceCollection AddAlsaHintService(this IServiceCollection services, Func<IServiceProvider, IAlsaHintService> implementationFactory)
-    {
-        services.AddSingleton(implementationFactory);
-        return services;
     }
 }
