@@ -69,16 +69,16 @@ namespace AlsaSharp.Internal.Audio
                 var controlsCount = GetControlsCountSafe(c.Index);
                 var controls = GetControlElementNamesSafe(c.Index);
                 list.Add(new CtlCardDto(
-                    CardIndex: c.Index,
-                    Id: c.Id,
-                    Name: c.Name,
-                    LongName: c.LongName,
-                    DriverName: c.Driver,
-                    MixerName: c.MixerName,
-                    Components: c.Components,
-                    ControlsCount: controlsCount,
-                    Controls: controls,
-                    Pcm: pcmStreams
+                    c.Index,
+                    c.Id,
+                    c.Name,
+                    c.LongName,
+                    c.Driver,
+                    c.MixerName,
+                    c.Components,
+                    controlsCount,
+                    controls,
+                    pcmStreams
                 ));
             }
             return list;
@@ -162,15 +162,15 @@ namespace AlsaSharp.Internal.Audio
             foreach (var h in _hints)
             {
                 list.Add(new HintDto(
-                    Name: h.Name,
-                    CardId: h.CardId,
-                    CardIndex: h.CardIndex,
-                    DeviceIndex: h.DeviceIndex >= 0 ? h.DeviceIndex : (int?)null,
-                    Description: h.Description ?? string.Empty,
-                    LongName: h.LongName ?? string.Empty,
-                    IOID: h.IOID ?? string.Empty,
-                    InterfaceType: h.InterfaceType.ToString(),
-                    ControlCardIndex: h.CardIndex
+                    h.Name,
+                    h.CardId,
+                    h.CardIndex,
+                    h.DeviceIndex >= 0 ? h.DeviceIndex : (int?)null,
+                    h.Description ?? string.Empty,
+                    h.LongName ?? string.Empty,
+                    h.IOID ?? string.Empty,
+                    h.InterfaceType.ToString(),
+                    h.CardIndex
                 ));
             }
             return list;

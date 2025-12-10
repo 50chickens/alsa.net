@@ -7,18 +7,14 @@ using AlsaSharp.Internal.Audio;
 
 namespace Example.AlsaHints;
 
-public class AlsaHintWorker : BackgroundService
+/// <summary>
+/// Worker service for ALSA hints.
+/// </summary>
+public class AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintService, IHostApplicationLifetime lifetime) : BackgroundService
 {
-    private readonly ILogger<AlsaHintWorker> _log;
-    private readonly IHintService _alsaHintService;
-    private readonly IHostApplicationLifetime _lifetime;
-
-    public AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintService, IHostApplicationLifetime lifetime)
-    {
-        _log = log;
-        _alsaHintService = alsaHintService;
-        _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
-    }
+    private readonly ILogger<AlsaHintWorker> _log = log;
+    private readonly IHintService _alsaHintService = alsaHintService;
+    private readonly IHostApplicationLifetime _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

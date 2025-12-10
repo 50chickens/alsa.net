@@ -1,16 +1,19 @@
 using System.Runtime.InteropServices;
 
-public class AlsaSanityTester
+/// <summary>
+/// ALSA sanity tester for debugging.
+/// </summary>
+public class AlsaSanityTester(string label)
 {
+    private readonly string _label = label ?? throw new ArgumentNullException("Label cannot be null");
     public void TestSanity()
     {
-        Console.WriteLine("Starting ALSA debug program...");
+        Console.WriteLine($"Starting ALSA debug program for {_label}...");
         int card = -1;
         int returnCode = Native.snd_card_next(ref card);
         Console.WriteLine($"snd_card_next returned {returnCode}, card={card}");
         while (card >= 0)
         {
-
             IntPtr p;
             returnCode = Native.snd_card_get_name(card, out p);
             Console.WriteLine($"snd_card_get_name returned rc={returnCode}, ptr={(p==IntPtr.Zero ? "<null>" : p.ToString())}");
@@ -47,7 +50,6 @@ public class AlsaSanityTester
         Console.WriteLine($"snd_mixer_load returned {lrc}");
         IntPtr first = Native.snd_mixer_first_elem(mixer);
         Console.WriteLine($"snd_mixer_first_elem returned {first}");
-
 
         returnCode = Native.snd_card_next(ref card);
         Console.WriteLine($"snd_card_next returned {returnCode}, card={card}");

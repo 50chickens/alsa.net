@@ -6,17 +6,13 @@ using System.Threading;
 
 namespace Example.SNRReduction.Services;
 
-public class ResultsWriter
+/// <summary>
+/// Writes results to a file in JSON format.
+/// </summary>
+public class ResultsWriter(string path)
 {
-    private readonly string _path;
+    private readonly string _path = path ?? throw new ArgumentNullException("Path cannot be null");
     private readonly object _lock = new object();
-
-    public ResultsWriter(string path)
-    {
-        _path = path ?? throw new ArgumentNullException(nameof(path));
-        var dir = Path.GetDirectoryName(_path);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
-    }
 
     public void Append<T>(T obj)
     {

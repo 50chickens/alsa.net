@@ -4,7 +4,7 @@
     {
         public static void Main(string[] args)
         {
-            var sanityTester = new AlsaSanityTester();
+            var sanityTester = new AlsaSanityTester("default");
             sanityTester.TestSanity();
         }
     }

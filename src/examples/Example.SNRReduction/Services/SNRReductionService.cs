@@ -17,18 +17,8 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
     {
            return new List<ControlLevel>()
            {
-                new ControlLevel()
-                {
-                     ControlName = "Capture Volume",
-                     ChannelName = "Front Left",
-                     Value = 32768
-                },
-                new ControlLevel()
-                {
-                     ControlName = "Capture Volume",
-                     ChannelName = "Front Right",
-                     Value = 32768
-                }
+                new ControlLevel("Capture Volume", "Front Left", 32768),
+                new ControlLevel("Capture Volume", "Front Right", 32768)
            };
     }
 
@@ -58,15 +48,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
     //         double signal = tools.MeasureSignalAsync(dev2, 1, 1000).GetAwaiter().GetResult();
     //         double snr = noise <= 0 ? double.PositiveInfinity : 20.0 * Math.Log10(signal / noise);
 
-    //         var res = new SNRSweepResult
-    //         {
-    //             ControlName = controlName,
-    //             ChannelName = ch.Name,
-    //             Value = (long)val,
-    //             NoiseRms = noise,
-    //             SignalRms = signal,
-    //             SNRdB = snr
-    //         };
+    //         var res = new SNRSweepResult(controlName, ch.Name, (long)val, signal, noise, snr);
 
     //         results.Add(res);
     //         try { writer.Append(res); } catch (Exception ex) { _log.Warn($"Failed to write sweep result: {ex.Message}"); }
