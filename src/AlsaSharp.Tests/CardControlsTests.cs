@@ -1,8 +1,7 @@
 using NUnit.Framework;
-using AlsaSharp.Internal;
 using AlsaSharp.Library.Logging;
 using System.Linq;
-using AlsaSharp; // for ISoundDevice and UnixSoundDeviceBuilder
+using AlsaSharp.Internal.Audio; // for ISoundDevice and UnixSoundDeviceBuilder
 
 namespace AlsaSharp.Tests
 {

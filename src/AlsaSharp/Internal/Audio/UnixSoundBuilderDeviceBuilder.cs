@@ -1,7 +1,6 @@
 ﻿using System.Runtime.InteropServices;
-using AlsaSharp.Internal;
 
-namespace AlsaSharp;
+namespace AlsaSharp.Internal.Audio;
 
 /// <summary>
 /// connect your sound device configuration to a virtual interface
