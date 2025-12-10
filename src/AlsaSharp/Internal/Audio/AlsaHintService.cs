@@ -1,8 +1,14 @@
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using AlsaSharp.Internal;
 using AlsaSharp.Internal.Audio;
 using Microsoft.Extensions.Logging;
+/// <summary>
+/// Service that enumerates ALSA device hints and card information and provides
+/// canonical DTO mappings used by the comparison tooling.
+/// </summary>
 public class AlsaHintService : IAlsaHintService
 {
     private List<AlsaHint> _hints;
@@ -19,6 +25,9 @@ public class AlsaHintService : IAlsaHintService
         _log = log;
     }
 
+    /// <summary>
+    /// All discovered ALSA hints.
+    /// </summary>
     public List<AlsaHint> Hints 
     { 
         get 
@@ -26,9 +35,146 @@ public class AlsaHintService : IAlsaHintService
             return _hints;
         } 
     }
+    /// <summary>
+    /// All discovered ALSA card information.
+    /// </summary>
     public List<AlsaCardInfo> CardInfos
     {
         get => _cards;
+    }
+    
+    /// <summary>
+    /// Returns canonical DTOs representing the parsed output of alsactl.
+    /// </summary>
+    /// <returns>List of <see cref="AlsactlCardDto"/> objects.</returns>
+    public List<AlsactlCardDto> GetAlsactlCards()
+    {
+        var list = new List<AlsactlCardDto>();
+        foreach (var c in _cards)
+        {
+            // build pcm streams
+            var pcmStreams = new List<PcmStreamDto>();
+            // group entries by Stream value
+            var groups = c.PcmEntries.GroupBy(e => e.Stream ?? string.Empty);
+            foreach (var g in groups)
+            {
+                var devices = new List<PcmDeviceDto>();
+                foreach (var e in g)
+                {
+                    var subs = e.Subdevices?.Select(s => new SubdeviceDto(s.SubdeviceIndex, s.Name)).ToList() ?? new List<SubdeviceDto>();
+                    devices.Add(new PcmDeviceDto(e.DeviceIndex, e.Id, e.Name, subs));
+                }
+                pcmStreams.Add(new PcmStreamDto(g.Key, devices));
+            }
+
+            var controlsCount = GetControlsCountSafe(c.Index);
+            var controls = GetControlElementNamesSafe(c.Index);
+            list.Add(new AlsactlCardDto(
+                CardIndex: c.Index,
+                Id: c.Id,
+                Name: c.Name,
+                LongName: c.LongName,
+                DriverName: c.Driver,
+                MixerName: c.MixerName,
+                Components: c.Components,
+                ControlsCount: controlsCount,
+                Controls: controls,
+                Pcm: pcmStreams
+            ));
+        }
+        return list;
+    }
+
+    private int GetControlsCountSafe(int cardIndex)
+    {
+        try
+        {
+            var ctlName = $"hw:{cardIndex}";
+            if (InteropAlsa.snd_ctl_open(out var ctl, ctlName, 0) != 0) return 0;
+            try
+            {
+                if (InteropAlsa.snd_ctl_elem_list_malloc(out var list) != 0) return 0;
+                try
+                {
+                    if (InteropAlsa.snd_ctl_elem_list(ctl, list) != 0) return 0;
+                    var cnt = InteropAlsa.snd_ctl_elem_list_get_count(list);
+                    return cnt;
+                }
+                finally
+                {
+                    InteropAlsa.snd_ctl_elem_list_free(list);
+                }
+            }
+            finally
+            {
+                InteropAlsa.snd_ctl_close(ctl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "GetControlsCountSafe failed for card {CardIndex}", cardIndex);
+            return 0;
+        }
+    }
+
+    private List<string> GetControlElementNamesSafe(int cardIndex)
+    {
+        var results = new List<string>();
+        try
+        {
+            var ctlName = $"hw:{cardIndex}";
+            if (InteropAlsa.snd_mixer_open(out var mixer, 0) != 0) return results;
+            try
+            {
+                if (InteropAlsa.snd_mixer_attach(mixer, ctlName) != 0) return results;
+                if (InteropAlsa.snd_mixer_load(mixer) != 0) return results;
+                var elem = InteropAlsa.snd_mixer_first_elem(mixer);
+                while (elem != IntPtr.Zero)
+                {
+                    var namePtr = InteropAlsa.snd_mixer_selem_get_name(elem);
+                    if (namePtr != IntPtr.Zero)
+                    {
+                        var name = Marshal.PtrToStringUTF8(namePtr);
+                        if (!string.IsNullOrEmpty(name)) results.Add(name);
+                    }
+                    elem = InteropAlsa.snd_mixer_elem_next(elem);
+                }
+            }
+            finally
+            {
+                InteropAlsa.snd_mixer_close(mixer);
+            }
+        }
+        catch (Exception ex)
+        {
+            // log and return whatever we collected (possibly empty)
+            _log?.LogDebug(ex, "GetControlElementNamesSafe failed for card {CardIndex}", cardIndex);
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Returns canonical hint DTOs representing the device hints in a stable shape.
+    /// </summary>
+    /// <returns>List of <see cref="AlsaHintDto"/> objects.</returns>
+    public List<AlsaHintDto> GetCanonicalHints()
+    {
+        var list = new List<AlsaHintDto>();
+        foreach (var h in _hints)
+        {
+            list.Add(new AlsaHintDto(
+                Name: h.Name,
+                CardId: h.CardId,
+                CardIndex: h.CardIndex,
+                DeviceIndex: h.DeviceIndex >= 0 ? h.DeviceIndex : (int?)null,
+                Description: h.Description ?? string.Empty,
+                LongName: h.LongName ?? string.Empty,
+                IOID: h.IOID ?? string.Empty,
+                InterfaceType: h.InterfaceType.ToString(),
+                ControlCardIndex: h.CardIndex
+            ));
+        }
+        return list;
     }
     private List<AlsaHint> GetAlsaHints()
     {
@@ -78,7 +224,7 @@ public class AlsaHintService : IAlsaHintService
         return results;
     }
 
-    private static string GetHintValue(IntPtr hint, string key)
+    private static string? GetHintValue(IntPtr hint, string key)
     {
         IntPtr valuePtr = InteropAlsa.snd_device_name_get_hint(hint, key);
         if (valuePtr == IntPtr.Zero) return null;
@@ -102,11 +248,11 @@ public class AlsaHintService : IAlsaHintService
 
         var control = new Control(cardIndex);
         string longName = GetCardLongName(cardIndex);
-        return new AlsaHint(name, desc, ioid, cardName, cardIndex, deviceIndex, iface, control, longName);
+        return new AlsaHint(name ?? string.Empty, desc ?? string.Empty, ioid ?? string.Empty, cardName, cardIndex, deviceIndex, iface, control, longName);
     }
 
-    private static bool IsNameValid(string name) => !string.IsNullOrWhiteSpace(name) && !name.Equals("null", StringComparison.OrdinalIgnoreCase);
-    private bool IsHardwareDevice(string name) => !string.IsNullOrWhiteSpace(name) && Regex.IsMatch(name, @"^hw:", RegexOptions.IgnoreCase); //use name ?? false || Regex.IsMatch(name, @"^hw:", RegexOptions.IgnoreCase);
+    private static bool IsNameValid(string? name) => !string.IsNullOrWhiteSpace(name) && !name!.Equals("null", StringComparison.OrdinalIgnoreCase);
+    private bool IsHardwareDevice(string? name) => !string.IsNullOrWhiteSpace(name) && Regex.IsMatch(name!, @"^hw:", RegexOptions.IgnoreCase);
 
     private bool TryParseName(string name, out InterfaceIdentificationType iface, out string cardId, out int cardIndex, out int deviceIndex) //use an extension method instead
     {
@@ -122,7 +268,7 @@ public class AlsaHintService : IAlsaHintService
             InteropAlsa.snd_card_next(ref card);
             while (card >= 0)
             {
-                string id = null, name = null, longname = null, driver = null, mixer = null, components = null;
+                string id = string.Empty, name = string.Empty, longname = string.Empty, driver = string.Empty, mixer = string.Empty, components = string.Empty;
                 IntPtr ctl = IntPtr.Zero;
                 var ctlName = $"hw:{card}";
                 if (InteropAlsa.snd_ctl_open(out ctl, ctlName, 0) == 0)

@@ -8,10 +8,16 @@ namespace AlsaSharp.Internal
     /// </summary>
     public sealed class MixerHandle : IDisposable
     {
+        /// <summary>Underlying native mixer handle.</summary>
         public IntPtr Handle { get; private set; }
 
+        /// <summary>Indicates whether the mixer handle is open.</summary>
         public bool IsOpen => Handle != IntPtr.Zero;
 
+        /// <summary>
+        /// Opens and initializes a mixer handle for the given card index.
+        /// </summary>
+        /// <param name="card">ALSA card index.</param>
         public MixerHandle(int card)
         {
             if (InteropAlsa.snd_mixer_open(out var h, 0) < 0) { Handle = IntPtr.Zero; return; }
@@ -23,10 +29,15 @@ namespace AlsaSharp.Internal
             if (InteropAlsa.snd_mixer_load(Handle) < 0) { Close(); return; }
         }
 
+        /// <summary>Returns the first mixer element pointer or <see cref="IntPtr.Zero"/>.</summary>
         public IntPtr FirstElem() => IsOpen ? InteropAlsa.snd_mixer_first_elem(Handle) : IntPtr.Zero;
 
+        /// <summary>Returns the next mixer element pointer following <paramref name="elem"/>.</summary>
         public IntPtr NextElem(IntPtr elem) => InteropAlsa.snd_mixer_elem_next(elem);
 
+        /// <summary>Finds an element by its name and returns the native pointer or zero if not found.</summary>
+        /// <param name="name">Element name to find.</param>
+        /// <returns>Pointer to the element or <see cref="IntPtr.Zero"/>.</returns>
         public IntPtr FindElementByName(string name)
         {
             if (!IsOpen) return IntPtr.Zero;
@@ -43,6 +54,7 @@ namespace AlsaSharp.Internal
             return IntPtr.Zero;
         }
 
+        /// <summary>Closes the mixer handle and frees native resources.</summary>
         public void Close()
         {
             if (Handle != IntPtr.Zero)
@@ -52,6 +64,7 @@ namespace AlsaSharp.Internal
             }
         }
 
+        /// <summary>Releases the mixer handle.</summary>
         public void Dispose() => Close();
     }
 }

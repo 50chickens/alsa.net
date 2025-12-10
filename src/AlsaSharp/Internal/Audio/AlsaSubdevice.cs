@@ -1,12 +1,20 @@
+/// <summary>
+/// Represents a single PCM subdevice.
+/// </summary>
 public class AlsaSubdevice
 {
+    private readonly int _subdeviceIndex;
+    private readonly string _name;
+
+    /// <summary>Initializes a new instance of <see cref="AlsaSubdevice"/>.</summary>
     public AlsaSubdevice(int subdeviceIndex, string name)
     {
-        SubdeviceIndex = subdeviceIndex;
-        if (name == null) throw new InvalidOperationException("AlsaSubdevice: name is null");
-        Name = name;
+        _subdeviceIndex = subdeviceIndex;
+        _name = name ?? throw new InvalidOperationException("AlsaSubdevice: name is null");
     }
 
-    public int SubdeviceIndex { get; }
-    public string Name { get; }
+    /// <summary>Index of the subdevice.</summary>
+    public int SubdeviceIndex => _subdeviceIndex;
+    /// <summary>Name of the subdevice.</summary>
+    public string Name => _name;
 }

@@ -8,29 +8,18 @@ namespace AlsaSharp;
 /// </summary>
 public static class UnixSoundDeviceBuilder
 {
-    /// <summary>
-    /// create and connect a sound device.
-    /// use <see cref="SoundDeviceSettings"/> for parameter set up.
-    /// </summary>
-    /// <param name="settings">sound device configuration to use</param>
-    /// <returns>sound device ready to use</returns>
-    //public static ISoundDevice Build(SoundDeviceSettings settings) => new UnixSoundDevice(settings);
+    // create and connect a sound device.
+    // use SoundDeviceSettings for parameter set up.
+    // The legacy Build overload that accepted settings is intentionally commented out.
+    // If re-enabled, provide matching XML documentation for the method signature.
 
     /// <summary>
-    /// create and connect a sound device from an alsa card
+    /// Create and connect a sound device for each discovered ALSA card.
     /// </summary>
-    /// <param name="card">the alsa card to use</param>
-    /// <returns>sound device ready to use</returns>
+    /// <returns>Sound device instances ready to use.</returns>
     public static IEnumerable<ISoundDevice> Build()
     {
         
-        // var soundDeviceSettings = new SoundDeviceSettings
-        // {
-        //     RecordingDeviceName = $"hw:CARD={soundDeviceOptions.RecordingDeviceName}",
-        //     MixerDeviceName = $"hw:CARD={soundDeviceOptions.MixerDeviceName}",
-        //     PlaybackDeviceName = $"hw:CARD={soundDeviceOptions.PlaybackDeviceName}"
-        // };
-        // return new UnixSoundDevice(soundDeviceSettings);
         return GetSoundDevices();
     }
     private static IEnumerable<ISoundDevice> GetSoundDevices()

@@ -193,16 +193,6 @@ internal static class InteropAlsa
 
     public static string StrError(int errno) => Marshal.PtrToStringUTF8(snd_strerror(errno)) ?? $"errno {errno}";
 
-    //private string GetHintValue(IntPtr hint, string key)
-    // {
-    //     IntPtr valuePtr = InteropAlsa.snd_device_name_get_hint(hint, key);
-    //     if (valuePtr == IntPtr.Zero)
-    //         return null;
-    //     return Marshal.PtrToStringAnsi(valuePtr);
-    // }
-
-    //implement other ALSA functions as needed - eg InteropAlsa.snd_device_name_get_hint;
-
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_device_name_hint(int card, string iface, out IntPtr hints);
 
@@ -277,5 +267,18 @@ internal static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_info_get_subdevices_count(IntPtr pcmInfo);
+
+    // Control element list helpers (used to compute controls_count similar to alsactl)
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_elem_list_malloc(out IntPtr list);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_elem_list(IntPtr ctl, IntPtr list);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_ctl_elem_list_get_count(IntPtr list);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_ctl_elem_list_free(IntPtr list);
 
 }

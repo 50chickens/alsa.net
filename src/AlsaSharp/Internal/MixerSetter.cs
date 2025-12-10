@@ -8,6 +8,8 @@ namespace AlsaSharp.Internal
     /// </summary>
     public class MixerSetter
     {
+        /// <summary>Attempts to set playback volume on a mixer element.</summary>
+        /// <returns>True on success, false otherwise.</returns>
         public bool TrySetPlaybackVolume(int card, string controlName, string channelName, nint value)
         {
             using var handle = new MixerHandle(card);
@@ -22,6 +24,8 @@ namespace AlsaSharp.Internal
             return rc >= 0;
         }
 
+        /// <summary>Attempts to set capture volume on a mixer element.</summary>
+        /// <returns>True on success, false otherwise.</returns>
         public bool TrySetCaptureVolume(int card, string controlName, string channelName, nint value)
         {
             using var handle = new MixerHandle(card);
@@ -36,6 +40,8 @@ namespace AlsaSharp.Internal
             return rc >= 0;
         }
 
+        /// <summary>Attempts to set the playback on/off switch for a mixer element.</summary>
+        /// <returns>True on success, false otherwise.</returns>
         public bool TrySetPlaybackSwitch(int card, string controlName, string channelName, int state)
         {
             using var handle = new MixerHandle(card);
@@ -49,6 +55,8 @@ namespace AlsaSharp.Internal
             return rc >= 0;
         }
 
+        /// <summary>Attempts to set the capture on/off switch for a mixer element.</summary>
+        /// <returns>True on success, false otherwise.</returns>
         public bool TrySetCaptureSwitch(int card, string controlName, string channelName, int state)
         {
             using var handle = new MixerHandle(card);

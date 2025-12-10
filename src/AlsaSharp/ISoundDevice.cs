@@ -58,7 +58,7 @@ public interface ISoundDevice : IDisposable
     /// play a wav stream until end of stream oder cancellation
     /// </summary>
     /// <param name="wavStream">stream of wav data to play</param>
-    /// /// <param name="cancellationToken">token to stop playback</param>
+    /// <param name="cancellationToken">token to stop playback</param>
     void Play(Stream wavStream, CancellationToken cancellationToken);
 
     /// <summary>
@@ -89,6 +89,10 @@ public interface ISoundDevice : IDisposable
     /// <param name="cancellationToken">token to cancel recording</param>
     void Record(Action<byte[]> onDataAvailable, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Set a simple mixer element value (volume/switch) by name/channel.
+    /// </summary>
+    /// <returns>An integer status code; non-negative on success.</returns>
     public int SetSimpleElementValue(string controlName, string channelName, nint value);
     
 }

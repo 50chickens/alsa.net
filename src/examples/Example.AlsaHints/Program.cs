@@ -5,6 +5,8 @@ class Program
     static void Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
+        // Prevent the host and framework from writing log lines to stdout
+        builder.Logging.ClearProviders();
         builder.Services.AddHostedService<AlsaHintWorker>();
         builder.Services.AddAlsaHintService(services =>
         {
