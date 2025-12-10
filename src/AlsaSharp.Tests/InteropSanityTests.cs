@@ -51,15 +51,15 @@ namespace AlsaSharp.Tests
                 }
                 else
                 {
-                    var (rc, p) = nameRes.Result;
-                    _log?.Info($"snd_card_get_name -> rc={rc}, ptr=0x{p.ToInt64():x}");
+                    var (returnCode, pointer) = nameRes.Result;
+                    _log?.Info($"snd_card_get_name -> rc={returnCode}, ptr=0x{pointer.ToInt64():x}");
 
-                    var str = NativeDiagnostics.PtrToStringUtf8Safe(p, "snd_card_get_name");
+                    var str = NativeDiagnostics.PtrToStringUtf8Safe(pointer, "snd_card_get_name");
                     _log?.Info($"Marshal result success={str.Success}, value='{str.Result}', error={str.Error}");
 
-                    if (p != IntPtr.Zero)
+                    if (pointer != IntPtr.Zero)
                     {
-                        InteropDiagnostics.Free(p);
+                        InteropDiagnostics.Free(pointer);
                     }
                 }
             }

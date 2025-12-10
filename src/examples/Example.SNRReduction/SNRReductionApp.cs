@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using AlsaSharp.Library.Logging;
+﻿using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Services;
@@ -26,9 +25,7 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService con
             _log.Info($"Baseline measurements written to: {fileNameToStoreMeasurements}");
             return;
         }
-
         _log.Info("SNR Reduction Application Finished");
-
     }
 
     private List<AudioMeterLevelReading> GetBaseLineReadings()
@@ -40,58 +37,4 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService con
         });
         return measurementResults;
     }
-
-    // private void SaveMeasurement(string fileName, List<AudioMeterLevelReading> measurementResults)
-    // {
-    //     var opts = new JsonSerializerOptions { WriteIndented = true };
-    //     var json = JsonSerializer.Serialize(measurementResults, opts);
-    //     File.WriteAllText(fileName, json);
-    //     _log.Debug($"Baseline written to {fileName}");
-    // }
-    // public void FindBestLevelsForControls(SNRReductionServiceOptions options)
-    // {
-    //     _log.Info($"Performing SNR Reduction using Audio Card: {options.AudioCardName}, AutoSweep: {options.AutoSweep}");
-
-
-        
-    //     _audioLevelMeterRecorderService.TakeAudioLevelRecording(TimeSpan.FromSeconds(3));
-    //     // Run an extended baseline: 1 minute total, readings every 3 seconds.
-    //     var baselineFile = AudioLevelMeterRecorderService.RecordMeasurementsToFile(device, TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(3), "Baseline input levels - no playback signal", _log);
-    //     _log.Info($"Baseline measurements written to: {baselineFile}");
-
-    //     // Baseline signal/noise for SNR calculations
-    //     var tools = new SNRTools(AlsaSharp.Library.Logging.LogManager.GetLogger<SNRTools>());
-    //     double baselineSignal = tools.MeasureSignalAsync(device, 2, 1000).GetAwaiter().GetResult();
-    //     double baselineNoise = tools.MeasureNoise(device, 2);
-    //     double baselineSNRdB = baselineNoise <= 0 ? double.PositiveInfinity : 20.0 * Math.Log10(baselineSignal / baselineNoise);
-    //     _log.Info($"Baseline combined signal RMS={baselineSignal:F6}, noise RMS={baselineNoise:F6}, SNR={baselineSNRdB:F2} dB");
-
-    //     // Find mixer card index (try to match by name)
-    //     int cardIndex = GetCardIndex(options.AudioCardName);
-    //     if (cardIndex < 0)
-    //     {
-    //         _log.Warn("No ALSA cards found; skipping sweep.");
-    //         return;
-    //     }
-
-    //     var probe = new MixerProbe();
-    //     var controls = probe.GetControlsForCard(cardIndex);
-    //     foreach (var c in controls)
-    //     {
-    //         foreach (var ch in c.Channels)
-    //         {
-    //             // skip channels with no range
-    //             if (ch.Max <= ch.Min) continue;
-    //             // sample a few points across the range
-    //             var results = SweepControl(probe, cardIndex, c.ControlName, ch, soundSettings);
-    //             // pick best by SNR while keeping signal within ~1 dB of baseline
-    //             var acceptable = results.Where(r => Math.Abs(20.0 * Math.Log10(r.SignalRms / baselineSignal)) <= 1.0).ToList();
-    //             var best = acceptable.OrderByDescending(r => r.SNRdB).FirstOrDefault();
-    //             if (best != null)
-    //             {
-    //                 _log.Info($"Control={c.ControlName} Channel={ch.Name} -> best value={best.Value} SNR={best.SNRdB:F2} dB");
-    //             }
-    //         }
-    //     }
-    // }
 }

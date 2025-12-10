@@ -19,15 +19,12 @@ namespace AlsaSharp.Tests
             logBuilder.Build();
             _log = LogManager.GetLogger<CardControlTests>();
             _log.Info($"Logger initialized for {GetType().Name}.");
-
         }
         [Test]
         [Category("Integration")]
         public void GetControlsForDefaultCard_ReturnsControls()
         {
             _log.Info("Starting GetControlsForDefaultCard_ReturnsControls test.");
-            
         }
-        
     }
 }

@@ -38,8 +38,8 @@ namespace AlsaSharp.Internal.Audio
             try
             {
                 // open mixer
-                int rc = InteropAlsa.snd_mixer_open(out mixer, 0);
-                if (rc < 0) throw new InvalidOperationException($"snd_mixer_open failed: {InteropAlsa.StrError(rc)}");
+                int returnCode = InteropAlsa.snd_mixer_open(out mixer, 0);
+                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_open failed: {InteropAlsa.StrError(returnCode)}");
 
                 // Prefer attaching mixer by card short name when available
                 // (e.g. "hw:CARD=IQaudIOCODEC"). If the MixerDeviceName
@@ -50,14 +50,14 @@ namespace AlsaSharp.Internal.Audio
                     ? mixerDeviceName
                     : $"hw:CARD={mixerDeviceName}";
 
-                rc = InteropAlsa.snd_mixer_attach(mixer, attachName);
-                if (rc < 0) throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(rc)}");
+                returnCode = InteropAlsa.snd_mixer_attach(mixer, attachName);
+                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(returnCode)}");
 
-                rc = InteropAlsa.snd_mixer_selem_register(mixer, IntPtr.Zero, IntPtr.Zero);
-                if (rc < 0) throw new InvalidOperationException($"snd_mixer_selem_register failed: {InteropAlsa.StrError(rc)}");
+                returnCode = InteropAlsa.snd_mixer_selem_register(mixer, IntPtr.Zero, IntPtr.Zero);
+                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_selem_register failed: {InteropAlsa.StrError(returnCode)}");
 
-                rc = InteropAlsa.snd_mixer_load(mixer);
-                if (rc < 0) throw new InvalidOperationException($"snd_mixer_load failed: {InteropAlsa.StrError(rc)}");
+                returnCode = InteropAlsa.snd_mixer_load(mixer);
+                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_load failed: {InteropAlsa.StrError(returnCode)}");
 
                 var elem = InteropAlsa.snd_mixer_first_elem(mixer);
                 while (elem != IntPtr.Zero)
@@ -90,18 +90,18 @@ namespace AlsaSharp.Internal.Audio
                             nint min = 0;
                             nint max = 0;
 
-                            rc = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, ch, &raw);
-                            if (rc < 0)
+                            returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, ch, &raw);
+                            if (returnCode < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(rc)}");
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(returnCode)}");
                                 continue;
                             }
 
                             // get range
-                            rc = InteropAlsa.snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-                            if (rc < 0)
+                            returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+                            if (returnCode < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(rc)}");
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(returnCode)}");
                                 continue;
                             }
 
@@ -123,10 +123,10 @@ namespace AlsaSharp.Internal.Audio
             {
                 if (mixer != IntPtr.Zero)
                 {
-                    int rc = InteropAlsa.snd_mixer_close(mixer);
-                    if (rc < 0)
+                    int returnCode = InteropAlsa.snd_mixer_close(mixer);
+                    if (returnCode < 0)
                     {
-                        var closeEx = new InvalidOperationException($"snd_mixer_close failed: {InteropAlsa.StrError(rc)}");
+                        var closeEx = new InvalidOperationException($"snd_mixer_close failed: {InteropAlsa.StrError(returnCode)}");
                         if (primaryEx != null)
                             throw new AggregateException(primaryEx, closeEx);
                         else

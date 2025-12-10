@@ -1,5 +1,8 @@
 using NUnit.Framework;
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Tests.Library;
+using AlsaSharp.Tests.NUnit;
+using Microsoft.Extensions.Configuration;
 using System.Linq;
 using AlsaSharp.Internal.Audio; 
 
@@ -8,6 +11,21 @@ namespace AlsaSharp.Tests
     [TestFixture]
     public class CardControlsTests
     {
+        private readonly IConfiguration _iconfiguration = TestUtils.BuildTestConfiguration();
+        private ILog<CardControlsTests> _log;
+
+        private ILog<ISoundDeviceManager> _soundDeviceManagerLog;
+
+        [OneTimeSetUp]
+        public void Setup()
+        {
+            var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
+            logBuilder.Build();
+            _log = LogManager.GetLogger<CardControlsTests>();
+            _soundDeviceManagerLog = LogManager.GetLogger<ISoundDeviceManager>();
+            _log.Info($"Logger initialized for {GetType().Name}.");
+        }
+
         [Test]
         [Category("Integration")]
         public void GetControls_ForFirstCard_ReturnsArray()
@@ -18,20 +36,12 @@ namespace AlsaSharp.Tests
             Assert.IsNotNull(first, "No ALSA sound devices found on system to test controls.");
 
             // Create a manager and retrieve simple mixer elements for the discovered device
-            var log = LogManager.GetLogger<ISoundDeviceManager>();
             var mixerName = first.Settings.MixerDeviceName;
             Assert.IsNotNull(mixerName, "Mixer device name is null or not available.");
-            var soundDeviceManager = new SoundDeviceManager(log, 0, mixerName);
+            var soundDeviceManager = new SoundDeviceManager(_soundDeviceManagerLog, 0, mixerName);
             var controls = soundDeviceManager.GetMixerSimpleElements(first);
+            _log.Info($"Found {controls.Count} controls for device '{first.Settings.MixerDeviceName}'");
             Assert.IsNotNull(controls, "GetMixerControls returned null");
-
-            TestContext.Progress.WriteLine($"Found {controls.Count} controls for device '{first.Settings.MixerDeviceName}'");
-
-            // Dispose any devices created by the builder
-            foreach (var d in devices)
-            {
-                try { d.Dispose(); } catch { }
-            }
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using AlsaSharp.Library.Logging;
-using AlsaSharp.Library.Logging.Tests;
 using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
@@ -12,14 +11,14 @@ namespace AlsaSharp.Tests
     public class SoundDeviceSettingsTests
     {
         private readonly IConfiguration _iconfiguration = TestUtils.BuildTestConfiguration();
-        private ILog<NUnitLoggerTests> _log;
+        private ILog<SoundDeviceSettingsTests> _log;
 
         [OneTimeSetUp]
         public void Setup()
         {
             var logBuilder = new LogBuilder(_iconfiguration).UseNunitTestContext();
             logBuilder.Build();
-            _log = LogManager.GetLogger<NUnitLoggerTests>();
+            _log = LogManager.GetLogger<SoundDeviceSettingsTests>();
             _log.Info($"Logger initialized for {GetType().Name}.");
         }
         [Test]
