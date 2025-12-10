@@ -3,16 +3,17 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using AlsaSharp.Internal.Audio;
 
 namespace Example.AlsaHints;
 
 public class AlsaHintWorker : BackgroundService
 {
     private readonly ILogger<AlsaHintWorker> _log;
-    private readonly IAlsaHintService _alsaHintService;
+    private readonly IHintService _alsaHintService;
     private readonly IHostApplicationLifetime _lifetime;
 
-    public AlsaHintWorker(ILogger<AlsaHintWorker> log, IAlsaHintService alsaHintService, IHostApplicationLifetime lifetime)
+    public AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintService, IHostApplicationLifetime lifetime)
     {
         _log = log;
         _alsaHintService = alsaHintService;

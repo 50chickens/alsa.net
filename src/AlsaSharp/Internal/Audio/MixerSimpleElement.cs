@@ -1,4 +1,4 @@
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
     /// Represents information about a single mixer channel (volume, range and switch state).

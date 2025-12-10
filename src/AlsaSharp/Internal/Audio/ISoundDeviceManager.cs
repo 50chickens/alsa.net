@@ -1,13 +1,13 @@
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
-    /// Interface for managing ALSA sound devices (placeholder for future APIs).
-    /// </summary>
-    public interface IAlsaSoundDeviceManager
+    /// Service interface for managing sound devices.
+    /// </summary> 
+    public interface ISoundDeviceManager
     {
-        // ISoundDevice GetSoundDeviceByName(string cardName);
-        // List<MixerSimpleElement> GetMixerSimpleElementsForSoundDevice(int id);
+        /// <summary>
+        /// Get simple mixer elements for a given sound device.
+        /// </summary>
+        List<MixerSimpleElement> GetMixerSimpleElements(ISoundDevice soundDevice);
     }
 }
-
-

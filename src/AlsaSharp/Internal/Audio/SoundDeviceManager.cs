@@ -1,14 +1,14 @@
 using AlsaSharp.Library.Logging;
 using System.Runtime.InteropServices;
 
-namespace AlsaSharp.Internal
+namespace AlsaSharp.Internal.Audio
 {
     /// <summary>
     /// Represents an ALSA sound card.
     /// </summary>
-    public class SoundDeviceManager : IAlsaSoundDeviceManager
+    public class SoundDeviceManager : ISoundDeviceManager
     {
-        private readonly ILog<IAlsaSoundDeviceManager> _log;
+        private readonly ILog<ISoundDeviceManager> _log;
 
         /// <summary>
         /// Creates a new instance of the Card class.
@@ -16,7 +16,7 @@ namespace AlsaSharp.Internal
         /// <param name="log">Logger instance scoped to this type.</param>
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
-        public SoundDeviceManager(ILog<IAlsaSoundDeviceManager> log, int index, string name)
+        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
             
@@ -137,15 +137,5 @@ namespace AlsaSharp.Internal
 
             return list;
         }
-
-        // public List<MixerSimpleElement> GetMixerSimpleElementsForSoundDevice(int id)
-        // {
-        //     throw new NotImplementedException();
-        // }
-
-        // public ISoundDevice GetSoundDeviceByName(string cardName)
-        // {
-        //     throw new NotImplementedException();
-        // }
     }
 }

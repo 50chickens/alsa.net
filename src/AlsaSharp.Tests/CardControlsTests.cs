@@ -19,7 +19,7 @@ namespace AlsaSharp.Tests
             Assert.IsNotNull(first, "No ALSA sound devices found on system to test controls.");
 
             // Create a manager and retrieve simple mixer elements for the discovered device
-            var log = LogManager.GetLogger<IAlsaSoundDeviceManager>();
+            var log = LogManager.GetLogger<ISoundDeviceManager>();
             var mixerName = first.Settings.MixerDeviceName;
             Assert.IsNotNull(mixerName, "Mixer device name is null or not available.");
             var soundDeviceManager = new SoundDeviceManager(log, 0, mixerName);

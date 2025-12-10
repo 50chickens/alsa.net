@@ -3,12 +3,12 @@ namespace AlsaSharp.Internal
     /// <summary>
     /// Lightweight placeholder for ALSA mixer related helpers.
     /// </summary>
-    public class AlsaMixer
+    public class Mixer
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="AlsaMixer"/> class.
+        /// Initializes a new instance of the <see cref="Mixer"/> class.
         /// </summary>
-        public AlsaMixer()
+        public Mixer()
         {
         }
         

@@ -6,13 +6,8 @@ namespace AlsaSharp;
 /// <summary>
 /// connect your sound device configuration to a virtual interface
 /// </summary>
-public static class UnixSoundDeviceBuilder
+public class UnixSoundDeviceBuilder
 {
-    // create and connect a sound device.
-    // use SoundDeviceSettings for parameter set up.
-    // The legacy Build overload that accepted settings is intentionally commented out.
-    // If re-enabled, provide matching XML documentation for the method signature.
-
     /// <summary>
     /// Create and connect a sound device for each discovered ALSA card.
     /// </summary>

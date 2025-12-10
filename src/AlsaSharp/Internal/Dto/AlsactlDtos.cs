@@ -69,7 +69,7 @@ public class PcmStreamDto
 /// <summary>
 /// DTO describing an ALSA card in the canonical alsactl output shape.
 /// </summary>
-public class AlsactlCardDto
+public class CtlCardDto
 {
     /// <summary>Card index.</summary>
     public int CardIndex { get; set; }
@@ -93,9 +93,9 @@ public class AlsactlCardDto
     public List<PcmStreamDto> Pcm { get; set; } = new List<PcmStreamDto>();
 
     /// <summary>Parameterless constructor for serializer.</summary>
-    public AlsactlCardDto() { }
-    /// <summary>Initializes a new instance of <see cref="AlsactlCardDto"/>.</summary>
-    public AlsactlCardDto(int CardIndex, string Id, string Name, string LongName, string DriverName, string MixerName, string Components, int ControlsCount, List<string> Controls, List<PcmStreamDto> Pcm)
+    public CtlCardDto() { }
+    /// <summary>Initializes a new instance of <see cref="CtlCardDto"/>.</summary>
+    public CtlCardDto(int CardIndex, string Id, string Name, string LongName, string DriverName, string MixerName, string Components, int ControlsCount, List<string> Controls, List<PcmStreamDto> Pcm)
     {
         this.CardIndex = CardIndex;
         this.Id = Id;
@@ -113,7 +113,7 @@ public class AlsactlCardDto
 /// <summary>
 /// Canonical hint DTO used by the comparison tooling.
 /// </summary>
-public class AlsaHintDto
+public class HintDto
 {
     /// <summary>Raw hint name.</summary>
     public string Name { get; set; }
@@ -135,8 +135,8 @@ public class AlsaHintDto
     public int ControlCardIndex { get; set; }
 
     
-    /// <summary>Initializes a new instance of <see cref="AlsaHintDto"/>.</summary>
-    public AlsaHintDto(string Name, string CardId, int CardIndex, int? DeviceIndex, string Description, string LongName, string IOID, string InterfaceType, int ControlCardIndex)
+    /// <summary>Initializes a new instance of <see cref="HintDto"/>.</summary>
+    public HintDto(string Name, string CardId, int CardIndex, int? DeviceIndex, string Description, string LongName, string IOID, string InterfaceType, int ControlCardIndex)
     {
         this.Name = Name;
         this.CardId = CardId;
