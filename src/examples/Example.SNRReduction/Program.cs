@@ -1,4 +1,6 @@
+using System.Security.AccessControl;
 using AlsaSharp;
+using AlsaSharp.Internal;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Audio;
 using Example.SNRReduction.Extensions;
@@ -13,43 +15,56 @@ namespace Example.SNRReduction;
 
 internal class Program
 {
+    // static void Main(string[] args)
+    //     {
+    //         var builder = Host.CreateApplicationBuilder(args);
+    //         builder.Services.AddHostedService<AlsaHintWorker>();
+    //         //builder.Services.AddHintService(HintServiceBuilder.Build);
+    //         var host = builder.Build();
+    //         host.Run();
+    //     }
     private static void Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
-
         builder.Configuration.AddEnvironmentVariables(prefix: "SNR_");
 
         var switchMappings = new Dictionary<string, string>
-         {
-             { "--AutoSweep", "SNRReduction:AutoSweep" },
-             { "--AudioCardName", "SNRReduction:AudioCardName" },
+        {
+            { "--AutoSweep", "SNRReduction:AutoSweep" },
+            { "--AudioCardName", "SNRReduction:AudioCardName" },
 
-         };
+        };
 
         builder.Configuration.AddCommandLine(args, switchMappings);
         builder.Services.AddOptions<SNRReductionServiceOptions>().Bind(builder.Configuration.GetSection(SNRReductionServiceOptions.Settings));
         builder.Services.AddOptions<AudioLevelMeterRecorderServiceOptions>().Bind(builder.Configuration.GetSection(AudioLevelMeterRecorderServiceOptions.Settings));
         builder.Services.AddOptions<AudioCardOptions>().Bind(builder.Configuration.GetSection(AudioCardOptions.Settings));
-        builder.Services.AddSingleton<IControlSweepService, SignalNoiseRatioOptimizer>();
+        builder.Services.AddSingleton(new ControlSweepOptions(new List<AlsaControl>()));
+        
+        builder.Services.AddSingleton<IControlSweepService>(serviceProvider =>
+        {
+            var log = serviceProvider.GetRequiredService<ILog<SignalNoiseRatioOptimizer>>();
+            var opts = serviceProvider.GetService<ControlSweepOptions>() ?? new ControlSweepOptions(new List<AlsaControl>());
+            var recorder = serviceProvider.GetRequiredService<IAudioLevelMeterRecorderService>();
+            return new SignalNoiseRatioOptimizer(log, opts, recorder);
+        });
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
         builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
+        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
-        builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
-        
         builder.Services.AddSingleton<IAudioInterfaceLevelMeter>(serviceProvider =>
             new AudioInterfaceLevelMeter(
                 serviceProvider.GetRequiredService<ISoundDevice>(),
                 serviceProvider.GetRequiredService<ILog<AudioInterfaceLevelMeter>>()));
-
+        builder.Services.AddSingleton(serviceProvider =>
+        {
+            SoundDeviceSettings soundDeviceSettings = new SoundDeviceSettings();
+            return AlsaDeviceBuilder.Build(soundDeviceSettings);
+        });
+        builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
-        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
-        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IAudioInterfaceLevelMeter>());
-
-        builder.Services.AddSingleton<SNRReductionApp>();
-        builder.Services.AddSingleton<IControlSweepService, SignalNoiseRatioOptimizer>();
-        
         builder.Logging.ClearProviders();
 
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
@@ -61,19 +76,28 @@ internal class Program
         });
 
         builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
-        using var host = builder.Build();
+        builder.Services.AddHostedService<SNRReductionWorker>();
+    
+        var host = builder.Build();
 
-        using var serviceScope = host.Services.CreateScope();
-        var serviceProvider = serviceScope.ServiceProvider;
-
-        var logger = serviceProvider.GetRequiredService<ILog<Program>>();
-        var options = serviceProvider.GetRequiredService<SNRReductionServiceOptions>();
-        
-        logger.Info("Application starting...");
-
-        serviceProvider.GetRequiredService<SNRReductionApp>().Run();
-        
+        var logger = host.Services.GetRequiredService<ILog<Program>>();
+        logger.Info("Application starting....");
+        host.Run();
         logger.Info("Application finished.");
 
+    }
+    
+}
+
+public static class ServiceExtensions
+{
+    public static IServiceCollection AddSNRReductionWorker(this IServiceCollection services)
+    {
+
+        services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
+        services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
+        services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
+        services.AddSingleton<SNRReductionWorker>();
+        return services;
     }
 }
