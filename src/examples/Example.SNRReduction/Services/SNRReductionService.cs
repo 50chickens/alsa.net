@@ -260,6 +260,20 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
         }
 
 
+        // write results to a timestamped json file in the current working directory
+        try
+        {
+            var outFile = $"snr_sweep_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+            var writer = new AlsaSharp.Library.Logging.JsonWriter(outFile);
+            var payload = new { TimestampUtc = DateTime.UtcNow, ReferenceSignalDb = referenceSignalDb, Sweep = results };
+            writer.Append(payload);
+            _log.Info($"Wrote sweep results to {outFile}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Failed to write sweep results to JSON file");
+        }
+
         return results;
     }
 

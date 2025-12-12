@@ -12,4 +12,7 @@ public class SNRReductionServiceOptions
     public bool TerminalGui { get; set; } = false;
     // Poll interval in seconds for Terminal GUI mode.
     public int GuiIntervalSeconds { get; set; } = 1;
+    public bool RestoreAlsaStateBeforeMeasurement { get; set; } = false;
+    public string DefaultAudioStateFolderName { get; set; } = "~/pi-stomp/setup/audio";
+    public string DefaultAudioStateFileName { get; set; } = "iqaudiocodec.state";
 }

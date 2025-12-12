@@ -16,7 +16,7 @@ public class SNRReductionWorker : BackgroundService
     private readonly ILog<SNRReductionWorker> _log;
     private readonly IAudioLevelMeterRecorderService _recorder;
     private readonly AudioLevelMeterRecorderServiceOptions _recorderOptions;
-    private readonly SNRReductionServiceOptions _options;
+    private readonly SNRReductionServiceOptions _snrReductionServiceOptions;
     private readonly IControlSweepService _sweepService;
     private readonly ISoundDevice _soundDevice;
     private readonly IHostApplicationLifetime _lifetime;
@@ -35,7 +35,7 @@ public class SNRReductionWorker : BackgroundService
         _log = log ?? throw new ArgumentNullException(nameof(log));
         _recorder = recorder ?? throw new ArgumentNullException(nameof(recorder));
         _recorderOptions = recorderOptions?.Value ?? new AudioLevelMeterRecorderServiceOptions(3, 1, "Baseline recording");
-        _options = options?.Value ?? new SNRReductionServiceOptions();
+        _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
         _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
         _sweepService = sweepService ?? throw new ArgumentNullException(nameof(sweepService));
         _soundDevice = soundDevice ?? throw new ArgumentNullException(nameof(soundDevice));
@@ -51,17 +51,22 @@ public class SNRReductionWorker : BackgroundService
         var measurementCount = _recorderOptions.MeasurementCount;
 
         // Restore ALSA card state from predefined state file before measurement to ensure consistent starting point
-        try
+        if (_snrReductionServiceOptions.RestoreAlsaStateBeforeMeasurement)
         {
-            const string statePath = "/home/pistomp/pi-stomp/setup/audio/0-db.state";
-            _log.Info($"Restoring ALSA state from: {statePath}");
-            _soundDevice.RestoreStateFromAlsactlFile(statePath);
+            _log.Info("Restoring ALSA state before measurement as configured.");
+            try
+            {
+                string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                string defaultStateFileName = System.IO.Path.Combine(folderPath, _snrReductionServiceOptions.DefaultAudioStateFileName);
+                _log.Info($"Restoring ALSA state from: {defaultStateFileName}");
+                _soundDevice.RestoreStateFromAlsactlFile(defaultStateFileName);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Failed to restore ALSA state before measurement", ex);
+            }
         }
-        catch (Exception ex)
-        {
-            _log.Error(ex, "Failed to restore ALSA state before measurement");
-        }
-
+        
         // Run the measurement on a background task and enforce a reasonable timeout so the host doesn't hang.
         TimeSpan overallTimeout = TimeSpan.FromSeconds(Math.Max(10, measurementCount * measureDuration.TotalSeconds + 5));
 
@@ -92,7 +97,7 @@ public class SNRReductionWorker : BackgroundService
         Console.WriteLine(JsonSerializer.Serialize(new { Baseline = readings }, optionsJson));
 
         // If AutoSweep is enabled, run a short quick sweep to verify end-to-end behavior.
-        if (_options.AutoSweep)
+        if (_snrReductionServiceOptions.AutoSweep)
         {
             _log.Info("AutoSweep enabled - running a short control sweep test...");
             // quick small sweep around 0 to test that changing controls affects measured dBFS
