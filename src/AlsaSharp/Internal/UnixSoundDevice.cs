@@ -163,7 +163,18 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
             {
                 nint rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
                 Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_readi -> {rv} (frames requested={frames})");
-                ThrowErrorMessage(rv, ExceptionMessages.CanNotReadFromDevice);
+                if (rv < 0)
+                {
+                    // try to recover from transient I/O errors (eg. -EIO)
+                    int rec = InteropAlsa.snd_pcm_recover(_recordingPcm, (int)rv, 0);
+                    if (rec < 0)
+                    {
+                        Console.Error.WriteLine($"[ALSA ERROR] snd_pcm_recover failed: {InteropAlsa.StrError(rec)}");
+                        ThrowErrorMessage(rec, ExceptionMessages.CanNotReadFromDevice);
+                    }
+                    // recovered — try next read iteration
+                    continue;
+                }
                 saveStream.Write(readBuffer);
             }
         }
@@ -185,7 +196,17 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         {
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested)
             {
-                ThrowErrorMessage(InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames), ExceptionMessages.CanNotReadFromDevice);
+                nint rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
+                if (rv < 0)
+                {
+                    int rec = InteropAlsa.snd_pcm_recover(_recordingPcm, (int)rv, 0);
+                    if (rec < 0)
+                    {
+                        Console.Error.WriteLine($"[ALSA ERROR] snd_pcm_recover failed: {InteropAlsa.StrError(rec)}");
+                        ThrowErrorMessage(rec, ExceptionMessages.CanNotReadFromDevice);
+                    }
+                    continue;
+                }
                 onDataAvailable?.Invoke(readBuffer);
             }
         }
@@ -213,7 +234,24 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         fixed (int* dirP = &dir)
             ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_set_rate_near(pcm, @params, &val, dirP), ExceptionMessages.CanNotSetRate);
 
-        ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params(pcm, @params), ExceptionMessages.CanNotSetHwParams);
+        // Attempt to set hardware params; if we get a transient I/O error (-EIO)
+        // try to recover the PCM and retry once before failing.
+        int hwRv = InteropAlsa.snd_pcm_hw_params(pcm, @params);
+        if (hwRv < 0)
+        {
+            Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_hw_params returned {hwRv}, attempting snd_pcm_recover");
+            int rec = InteropAlsa.snd_pcm_recover(pcm, hwRv, 0);
+            if (rec < 0)
+            {
+                ThrowErrorMessage(rec, ExceptionMessages.CanNotSetHwParams);
+            }
+            // retry setting hw params after recovery
+            hwRv = InteropAlsa.snd_pcm_hw_params(pcm, @params);
+            if (hwRv < 0)
+            {
+                ThrowErrorMessage(hwRv, ExceptionMessages.CanNotSetHwParams);
+            }
+        }
     }
 
     void SetPlaybackVolume(nint volume)
@@ -302,15 +340,36 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
     void ClosePlaybackPcm()
     {
-        if (_playbackPcm == default)
-            return;
+        lock (PlaybackInitializationLock)
+        {
+            if (_playbackPcm == default)
+                return;
 
-        var rc = InteropAlsa.snd_pcm_drain(_playbackPcm);
-        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop playback device: {InteropAlsa.StrError(rc)}");
-        rc = InteropAlsa.snd_pcm_close(_playbackPcm);
-        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close playback device: {InteropAlsa.StrError(rc)}");
+            try
+            {
+                // Use snd_pcm_drop to stop the PCM immediately instead of draining.
+                // Draining can block indefinitely with some plugins (eg. pipewire); dropping
+                // is faster and avoids hang during shutdown.
+                var rc = InteropAlsa.snd_pcm_drop(_playbackPcm);
+                if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop playback device: {InteropAlsa.StrError(rc)}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_drop playback: {ex.Message}");
+            }
 
-        _playbackPcm = default;
+            try
+            {
+                var rc2 = InteropAlsa.snd_pcm_close(_playbackPcm);
+                if (rc2 < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close playback device: {InteropAlsa.StrError(rc2)}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_close playback: {ex.Message}");
+            }
+
+            _playbackPcm = default;
+        }
     }
 
     void OpenRecordingPcm()
@@ -324,15 +383,35 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 
     void CloseRecordingPcm()
     {
-        if (_recordingPcm == default)
-            return;
+        lock (RecordingInitializationLock)
+        {
+            if (_recordingPcm == default)
+                return;
 
-        var rc = InteropAlsa.snd_pcm_drain(_recordingPcm);
-        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop recording device: {InteropAlsa.StrError(rc)}");
-        rc = InteropAlsa.snd_pcm_close(_recordingPcm);
-        if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close recording device: {InteropAlsa.StrError(rc)}");
+            try
+            {
+                // Prefer dropping the PCM instead of draining to avoid blocking in
+                // plugins like pipewire when shutting down. Drop stops immediately.
+                var rc = InteropAlsa.snd_pcm_drop(_recordingPcm);
+                if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop recording device: {InteropAlsa.StrError(rc)}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_drop recording: {ex.Message}");
+            }
 
-        _recordingPcm = default;
+            try
+            {
+                var rc2 = InteropAlsa.snd_pcm_close(_recordingPcm);
+                if (rc2 < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close recording device: {InteropAlsa.StrError(rc2)}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_close recording: {ex.Message}");
+            }
+
+            _recordingPcm = default;
+        }
     }
 
     void OpenMixer()

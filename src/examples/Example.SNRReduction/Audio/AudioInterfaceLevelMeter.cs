@@ -10,28 +10,41 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
     private readonly ISoundDevice _device = device;
     private readonly ILog<AudioInterfaceLevelMeter> _log = log;
     private readonly object _recordLock = new object();
-    /// <summary>
-    /// Measure per-channel RMS and return dBFS values for left and right channels.
-    /// </summary>
     public (double LeftDbfs, double RightDbfs) MeasureLevels(int captureDurationMs)
     {
         var sumSqL = 0L; var sumSqR = 0L; int samples = 0;
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(captureDurationMs + 1000));
         bool headerSeen = false;
-
         void OnData(byte[] buffer)
         {
             if (!headerSeen) { headerSeen = true; return; }
-            int bytesPerSample = 2, channels = 2;
+            int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
+            int bytesPerSample = Math.Max(1, bitsPerSample / 8);
+            int channels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
+
+            if (channels <= 0) channels = 1;
+
             int frameCount = buffer.Length / (bytesPerSample * channels);
             if (frameCount <= 0) return;
             for (int i = 0; i < frameCount; i++)
             {
                 int offset = i * channels * bytesPerSample;
-                if (offset + 3 >= buffer.Length) break;
+                // ensure we have enough bytes for at least one sample
+                if (offset + bytesPerSample - 1 >= buffer.Length) break;
+
+                // read left channel (currently only 16-bit signed samples are supported)
                 short sL = BitConverter.ToInt16(buffer, offset);
-                short sR = BitConverter.ToInt16(buffer, offset + 2);
-                sumSqL += (long)sL * sL; sumSqR += (long)sR * sR; samples++;
+                sumSqL += (long)sL * sL;
+
+                if (channels >= 2)
+                {
+                    // ensure right sample bytes exist
+                    if (offset + bytesPerSample * 2 - 1 >= buffer.Length) break;
+                    short sR = BitConverter.ToInt16(buffer, offset + bytesPerSample);
+                    sumSqR += (long)sR * sR;
+                }
+
+                samples++;
             }
         }
 
@@ -67,13 +80,25 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
             return (noiseFloor, noiseFloor);
         }
 
-        double rmsL = Math.Sqrt(sumSqL / (double)samples) / 32768.0;
-        double rmsR = Math.Sqrt(sumSqR / (double)samples) / 32768.0;
+        // Determine channels from device settings and compute accordingly
+        int deviceChannels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
+        int bits = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
+        double maxAmp = Math.Pow(2.0, bits - 1) - 1.0; // e.g., 32767 for 16-bit
 
+        double rmsL = Math.Sqrt(sumSqL / (double)samples) / maxAmp;
         double leftDbfs = rmsL <= 0 ? noiseFloor : 20.0 * Math.Log10(rmsL);
+
+        if (deviceChannels <= 1)
+        {
+            _log?.Info("Input device is mono; skipping right-channel measurement.");
+            return (leftDbfs, double.NaN);
+        }
+        double rmsR = Math.Sqrt(sumSqR / (double)samples) / maxAmp;
         double rightDbfs = rmsR <= 0 ? noiseFloor : 20.0 * Math.Log10(rmsR);
         return (leftDbfs, rightDbfs);
     }
+
+    // Batch capture removed — use per-measurement recording via MeasureLevels.
 
     
 }

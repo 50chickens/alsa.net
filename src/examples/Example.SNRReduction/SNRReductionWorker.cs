@@ -22,7 +22,7 @@ public class SNRReductionWorker : BackgroundService
     private readonly ISoundDevice _soundDevice;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly string _timestamp;
-    private string fileNameToStoreMeasurements = "";
+    
     private TimeSpan _measureDuration;
     private int _measurementCount;
 
