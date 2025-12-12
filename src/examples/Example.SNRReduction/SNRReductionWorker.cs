@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.IO;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
@@ -22,8 +23,9 @@ public class SNRReductionWorker : BackgroundService
     private readonly IHostApplicationLifetime _lifetime;
     private readonly string _timestamp;
     private string fileNameToStoreMeasurements = "";
+    private TimeSpan _measureDuration;
+    private int _measurementCount;
 
-    
     public SNRReductionWorker(ILog<SNRReductionWorker> log,
         IAudioLevelMeterRecorderService recorder,
         IOptions<AudioLevelMeterRecorderServiceOptions> recorderOptions,
@@ -47,8 +49,8 @@ public class SNRReductionWorker : BackgroundService
     {
         _log.Info("SNRReductionWorker starting baseline measurement...");
 
-        var measureDuration = TimeSpan.FromSeconds(_recorderOptions.MeasurementDuration);
-        var measurementCount = _recorderOptions.MeasurementCount;
+        _measureDuration = TimeSpan.FromSeconds(_recorderOptions.MeasurementDuration);
+        _measurementCount = _recorderOptions.MeasurementCount;
 
         // Restore ALSA card state from predefined state file before measurement to ensure consistent starting point
         if (_snrReductionServiceOptions.RestoreAlsaStateBeforeMeasurement)
@@ -67,56 +69,30 @@ public class SNRReductionWorker : BackgroundService
             }
         }
         
-        // Run the measurement on a background task and enforce a reasonable timeout so the host doesn't hang.
-        TimeSpan overallTimeout = TimeSpan.FromSeconds(Math.Max(10, measurementCount * measureDuration.TotalSeconds + 5));
-
-        _log.Info($"Starting measurement: duration={measureDuration.TotalSeconds}s count={measurementCount} timeout={overallTimeout.TotalSeconds}s");
-
-        var measurementTask = Task.Run(() => _recorder.GetAudioMeterLevelReadings(measureDuration, measurementCount, _recorderOptions.Description), stoppingToken);
-
-        var completed = await Task.WhenAny(measurementTask, Task.Delay(overallTimeout, stoppingToken));
-
-        List<AudioMeterLevelReading> readings;
-        if (completed == measurementTask && measurementTask.Status == TaskStatus.RanToCompletion)
-        {
-            readings = measurementTask.Result;
-            _log.Info("Baseline measurement complete.");
-        }
-        else if (measurementTask.IsFaulted)
-        {
-            _log.Error(measurementTask.Exception, "Baseline measurement failed with exception");
-            readings = new List<AudioMeterLevelReading>();
-        }
-        else
-        {
-            _log.Warn("Baseline measurement timed out or was cancelled.");
-            readings = new List<AudioMeterLevelReading>();
-        }
-
-        var optionsJson = new JsonSerializerOptions { WriteIndented = true };
-        Console.WriteLine(JsonSerializer.Serialize(new { Baseline = readings }, optionsJson));
-
+        _log.Info($"Starting measurement: duration={_measureDuration.TotalSeconds}s count={_measurementCount}");
+        _recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, _recorderOptions.Description);            
+        
         // If AutoSweep is enabled, run a short quick sweep to verify end-to-end behavior.
-        if (_snrReductionServiceOptions.AutoSweep)
-        {
-            _log.Info("AutoSweep enabled - running a short control sweep test...");
-            // quick small sweep around 0 to test that changing controls affects measured dBFS
-            int controlMin = -4096;
-            int controlMax = 4096;
-            int controlStep = 4096;
-            TimeSpan sweepMeasureDuration = TimeSpan.FromSeconds(1);
-            int sweepMeasurementCount = 1;
+        // if (_snrReductionServiceOptions.AutoSweep)
+        // {
+        //     _log.Info("AutoSweep enabled - running a short control sweep test...");
+        //     // quick small sweep around 0 to test that changing controls affects measured dBFS
+        //     int controlMin = -4096;
+        //     int controlMax = 4096;
+        //     int controlStep = 4096;
+        //     TimeSpan sweepMeasureDuration = TimeSpan.FromSeconds(1);
+        //     int sweepMeasurementCount = 1;
 
-            try
-            {
-                var sweepResults = _sweepService.SweepControl(_soundDevice, string.Empty, controlMin, controlMax, controlStep, sweepMeasureDuration, sweepMeasurementCount);
-                Console.WriteLine(JsonSerializer.Serialize(new { Sweep = sweepResults }, optionsJson));
-            }
-            catch (Exception ex)
-            {
-                _log.Error(ex, "AutoSweep failed");
-            }
-        }
+        //     try
+        //     {
+        //         var sweepResults = _sweepService.SweepControl(_soundDevice, string.Empty, controlMin, controlMax, controlStep, sweepMeasureDuration, sweepMeasurementCount);
+        //         _log.Info(JsonSerializer.Serialize(new { Sweep = sweepResults }, optionsJson));
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _log.Error(ex, "AutoSweep failed");
+        //     }
+        // }
 
         // Signal the host to stop.
         _lifetime.StopApplication();

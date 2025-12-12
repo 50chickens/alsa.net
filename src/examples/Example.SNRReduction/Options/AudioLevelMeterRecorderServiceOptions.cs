@@ -11,7 +11,7 @@ public class AudioLevelMeterRecorderServiceOptions
     public AudioLevelMeterRecorderServiceOptions()
     {
         MeasurementDuration = 3;
-        MeasurementCount = 1;
+        MeasurementCount = 5;
         Description = "Baseline recording";
     }
 
