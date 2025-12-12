@@ -6,5 +6,5 @@ namespace Example.SNRReduction.Interfaces;
 
 public interface IControlSweepService
 {
-    //public List<SNRSweepResult> SweepControl(AudioCardMixerService probe, int cardIndex, string controlName, MixerControlInfo ch, SoundDeviceSettings soundSettings);
+    public List<SNRSweepResult> SweepControl(ISoundDevice soundDevice, string mixerElementName, int controlMin, int controlMax, int controlStep, TimeSpan measurementDuration, int measurementCount);
 }

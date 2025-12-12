@@ -1,12 +1,23 @@
 using AlsaSharp;
 using AlsaSharp.Library.Logging;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Example.SNRReduction;
 
-public class SNRTools(ILog<SNRTools> log)
+public class SNRTools
 {
-    private readonly ILog<SNRTools> _log = log;
-    byte[] GenerateToneWav(int sampleRate, int channels, int bitsPerSample, double freq, int seconds, double amplitude)
+    private readonly ILog<SNRTools> _log;
+
+    public SNRTools(ILog<SNRTools> log)
+    {
+        _log = log ?? throw new ArgumentNullException(nameof(log));
+    }
+
+    private byte[] GenerateToneWav(int sampleRate, int channels, int bitsPerSample, double freq, int seconds, double amplitude)
     {
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
@@ -39,14 +50,27 @@ public class SNRTools(ILog<SNRTools> log)
 
     internal double MeasureNoise(ISoundDevice device, int seconds)
     {
+        if (device is null)
+        {
+            _log.Warn("MeasureNoise called with null device");
+            return 0.0;
+        }
+
+        if (seconds <= 0)
+        {
+            _log.Warn($"MeasureNoise called with non-positive seconds: {seconds}");
+            return 0.0;
+        }
+
         var rmsList = new List<double>();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(seconds + 1));
         bool headerSeen = false;
 
         void OnData(byte[] buffer)
         {
+            if (buffer is null || buffer.Length == 0) return;
             if (!headerSeen) { headerSeen = true; return; }
-            int bytesPerSample = 2, channels = 2;
+            const int bytesPerSample = 2; const int channels = 2;
             int frameCount = buffer.Length / (bytesPerSample * channels);
             if (frameCount <= 0) return;
             long sumSqL = 0, sumSqR = 0; int samples = 0;
@@ -63,19 +87,45 @@ public class SNRTools(ILog<SNRTools> log)
             rmsList.Add(rms);
         }
 
-        var task = Task.Run(() => device.Record(OnData, cts.Token));
-        try
+        var recordTask = Task.Run(() => device.Record(OnData, cts.Token), cts.Token);
+        _ = recordTask.ContinueWith(t => { var ex = t.Exception ?? new Exception("record task faulted"); _log.Error(ex, "MeasureNoise: record task faulted"); }, TaskContinuationOptions.OnlyOnFaulted);
+
+        var finished = Task.WhenAny(recordTask, Task.Delay(TimeSpan.FromSeconds(seconds + 1))).GetAwaiter().GetResult();
+        if (finished != recordTask)
         {
-            task.Wait(cts.Token);
+            try { cts.Cancel(); } catch { /* cancellation best-effort */ }
+            _log.Info("MeasureNoise: timeout reached, recording canceled");
         }
-        catch
+
+        if (recordTask.IsFaulted)
         {
+            _log.Error(recordTask.Exception, $"MeasureNoise: recording failed: {recordTask.Exception?.Flatten().Message}");
+            return 0.0;
         }
+
         return rmsList.Count == 0 ? 0.0 : rmsList.Average();
     }
 
     public async Task<double> MeasureSignalAsync(ISoundDevice device, int seconds, double freq)
     {
+        if (device is null)
+        {
+            _log.Warn("MeasureSignalAsync called with null device");
+            return 0.0;
+        }
+
+        if (seconds <= 0)
+        {
+            _log.Warn($"MeasureSignalAsync called with non-positive seconds: {seconds}");
+            return 0.0;
+        }
+
+        if (freq <= 0)
+        {
+            _log.Warn($"MeasureSignalAsync called with non-positive frequency: {freq}");
+            return 0.0;
+        }
+
         int sampleRate = 48000, channels = 2, bits = 16;
         var tone = GenerateToneWav(sampleRate, channels, bits, freq, seconds, 0.5);
         var rmsList = new List<double>();
@@ -84,8 +134,9 @@ public class SNRTools(ILog<SNRTools> log)
 
         void OnData(byte[] buffer)
         {
+            if (buffer is null || buffer.Length == 0) return;
             if (!headerSeen) { headerSeen = true; return; }
-            int bytesPerSample = 2, chs = 2;
+            const int bytesPerSample = 2, chs = 2;
             int frameCount = buffer.Length / (bytesPerSample * chs);
             if (frameCount <= 0) return;
             long sumSqL = 0, sumSqR = 0; int samples = 0;
@@ -102,9 +153,34 @@ public class SNRTools(ILog<SNRTools> log)
             rmsList.Add(rms);
         }
 
-        var recordTask = Task.Run(() => device.Record(OnData, cts.Token));
-        device.Play(new MemoryStream(tone), cts.Token);
-        try { await recordTask; } catch { }
+        var recordTask = Task.Run(() => device.Record(OnData, cts.Token), cts.Token);
+        _ = recordTask.ContinueWith(t => { var ex = t.Exception ?? new Exception("record task faulted"); _log.Error(ex, "MeasureSignalAsync: record task faulted"); }, TaskContinuationOptions.OnlyOnFaulted);
+
+        // Play and wait for recording to complete or timeout
+        try
+        {
+            device.Play(new MemoryStream(tone), cts.Token);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, $"MeasureSignalAsync: Play failed: {ex.Message}");
+            try { cts.Cancel(); } catch { }
+            return 0.0;
+        }
+
+        var finished = await Task.WhenAny(recordTask, Task.Delay(TimeSpan.FromSeconds(seconds + 2)));
+        if (finished != recordTask)
+        {
+            try { cts.Cancel(); } catch { }
+            _log.Info("MeasureSignalAsync: recording timed out and was canceled");
+        }
+
+        if (recordTask.IsFaulted)
+        {
+            _log.Error(recordTask.Exception, $"MeasureSignalAsync: recording failed: {recordTask.Exception?.Flatten().Message}");
+            return 0.0;
+        }
+
         return rmsList.Count == 0 ? 0.0 : rmsList.Average();
     }
 

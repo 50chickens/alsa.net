@@ -1,4 +1,6 @@
 ﻿
+using System.Runtime.InteropServices;
+
 namespace AlsaSharp.Internal;
 
 class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
@@ -391,8 +393,195 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
     public int SetSimpleElementValue(string simpleElementName, string channelName, nint value)
     {
         OpenMixer();
-        var rv = InteropAlsa.snd_mixer_selem_set_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, value);
-        CloseMixer();
-        return rv;
+        try
+        {
+            // iterate mixer simple elements to find matching name
+            IntPtr elem = InteropAlsa.snd_mixer_first_elem(_mixer);
+            while (elem != IntPtr.Zero)
+            {
+                try
+                {
+                    IntPtr namePtr = InteropAlsa.snd_mixer_selem_get_name(elem);
+                    var name = Marshal.PtrToStringUTF8(namePtr) ?? string.Empty;
+                    if (string.Equals(name, simpleElementName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // determine channel target
+                        snd_mixer_selem_channel_id ch = snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT;
+                        if (!string.IsNullOrEmpty(channelName) && channelName.IndexOf("right", StringComparison.OrdinalIgnoreCase) >= 0)
+                            ch = snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT;
+                        else if (!string.IsNullOrEmpty(channelName) && (channelName.IndexOf("rear", StringComparison.OrdinalIgnoreCase) >= 0 || channelName.IndexOf("back", StringComparison.OrdinalIgnoreCase) >= 0))
+                            ch = snd_mixer_selem_channel_id.SND_MIXER_SCHN_REAR_RIGHT;
+
+                        // Prefer playback volume if available
+                        if (InteropAlsa.snd_mixer_selem_has_playback_volume(elem) != 0)
+                        {
+                            // if channelName suggests both/all, use set_playback_volume_all
+                            if (string.IsNullOrEmpty(channelName) || channelName.IndexOf("both", StringComparison.OrdinalIgnoreCase) >= 0 || channelName.IndexOf("all", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                return InteropAlsa.snd_mixer_selem_set_playback_volume_all(elem, value);
+                            }
+                            else
+                            {
+                                return InteropAlsa.snd_mixer_selem_set_playback_volume(elem, ch, value);
+                            }
+                        }
+
+                        // Fallback to capture volume if playback not supported
+                        if (InteropAlsa.snd_mixer_selem_has_capture_channel(elem, ch) != 0)
+                        {
+                            if (string.IsNullOrEmpty(channelName) || channelName.IndexOf("both", StringComparison.OrdinalIgnoreCase) >= 0 || channelName.IndexOf("all", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                return InteropAlsa.snd_mixer_selem_set_capture_volume_all(elem, value);
+                            }
+                            else
+                            {
+                                return InteropAlsa.snd_mixer_selem_set_capture_volume(elem, ch, value);
+                            }
+                        }
+
+                        // If neither volume API exists, try switch (on/off) if value is 0/1
+                        try
+                        {
+                            int switchVal = value == 0 ? 0 : 1;
+                            if (string.IsNullOrEmpty(channelName) || channelName.IndexOf("both", StringComparison.OrdinalIgnoreCase) >= 0 || channelName.IndexOf("all", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                var rvSwitch = InteropAlsa.snd_mixer_selem_set_playback_switch_all(elem, switchVal);
+                                if (rvSwitch >= 0) return rvSwitch;
+                                rvSwitch = InteropAlsa.snd_mixer_selem_set_capture_switch_all(elem, switchVal);
+                                if (rvSwitch >= 0) return rvSwitch;
+                            }
+                            else
+                            {
+                                var rvSwitch = InteropAlsa.snd_mixer_selem_set_playback_switch(elem, ch, switchVal);
+                                if (rvSwitch >= 0) return rvSwitch;
+                                rvSwitch = InteropAlsa.snd_mixer_selem_set_capture_switch(elem, ch, switchVal);
+                                if (rvSwitch >= 0) return rvSwitch;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"[ALSA ERROR] SetSimpleElementValue switch attempt failed for '{simpleElementName}': {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[ALSA ERROR] Error iterating mixer elements: {ex.Message}");
+                }
+
+                elem = InteropAlsa.snd_mixer_elem_next(elem);
+            }
+
+            // fallback: use current stored _mixerElement if available
+            if (_mixerElement != IntPtr.Zero)
+            {
+                if (InteropAlsa.snd_mixer_selem_has_playback_volume(_mixerElement) != 0)
+                {
+                    return InteropAlsa.snd_mixer_selem_set_playback_volume(_mixerElement, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, value);
+                }
+            }
+
+            return -1; // not found / not supported
+        }
+        finally
+        {
+            CloseMixer();
+        }
     }   
+
+    public void RestoreStateFromAlsactlFile(string stateFilePath)
+    {
+        if (string.IsNullOrEmpty(stateFilePath) || !File.Exists(stateFilePath))
+        {
+            Console.Error.WriteLine($"[ALSA INFO] State file not found: {stateFilePath}");
+            return;
+        }
+
+        string[] lines = File.ReadAllLines(stateFilePath);
+        string currentName = null;
+        // simple parser: when we find a name '...' line, collect subsequent value lines until the next control or closing brace
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (line.StartsWith("name "))
+            {
+                // name 'Mic 1 Volume'
+                int firstQuote = line.IndexOf('\'');
+                int lastQuote = line.LastIndexOf('\'');
+                if (firstQuote >= 0 && lastQuote > firstQuote)
+                {
+                    currentName = line.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+                }
+                else
+                {
+                    // fallback: split
+                    var parts = line.Split(new[] { ' ' }, 2);
+                    currentName = parts.Length > 1 ? parts[1].Trim().Trim('"') : null;
+                }
+            }
+
+            if (currentName != null && line.StartsWith("value"))
+            {
+                // value, value.0, value.1 formats
+                // examples: value 0  OR value.0 53  OR value false
+                var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                {
+                    string key = parts[0];
+                    string rawVal = parts[1];
+                    // if more tokens exist, last token is value
+                    if (parts.Length > 2) rawVal = parts[parts.Length - 1];
+
+                    // try boolean
+                    if (string.Equals(rawVal, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(rawVal, "false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int v = string.Equals(rawVal, "true", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                        // channel specified?
+                        if (key.Contains('.'))
+                        {
+                            var idxPart = key.Split('.').Last();
+                            if (int.TryParse(idxPart, out int idx) && idx >= 0)
+                            {
+                                var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
+                                try { SetSimpleElementValue(currentName, ch, v); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName}:{ch} -> {v}: {ex.Message}"); }
+                            }
+                        }
+                        else
+                        {
+                            try { SetSimpleElementValue(currentName, string.Empty, v); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName} -> {v}: {ex.Message}"); }
+                        }
+                        continue;
+                    }
+
+                    // try integer
+                    if (int.TryParse(rawVal, out int intVal))
+                    {
+                        if (key.Contains('.'))
+                        {
+                            var idxPart = key.Split('.').Last();
+                            if (int.TryParse(idxPart, out int idx) && idx >= 0)
+                            {
+                                var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
+                                try { SetSimpleElementValue(currentName, ch, intVal); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName}:{ch} -> {intVal}: {ex.Message}"); }
+                            }
+                        }
+                        else
+                        {
+                            try { SetSimpleElementValue(currentName, string.Empty, intVal); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName} -> {intVal}: {ex.Message}"); }
+                        }
+                        continue;
+                    }
+
+                    // could not parse (enum or string) - skip
+                    Console.Error.WriteLine($"[ALSA INFO] RestoreState: skipping unsupported value for control '{currentName}': {rawVal}");
+                }
+            }
+
+            // reset on end of control block
+            if (line == "}")
+            {
+                currentName = null;
+            }
+        }
+    }
 }

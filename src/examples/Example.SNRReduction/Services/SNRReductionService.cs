@@ -1,8 +1,11 @@
-﻿using Example.SNRReduction.Interfaces;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Models;
 using AlsaSharp.Library.Logging;
 using AlsaSharp;
-using AlsaSharp.Internal;
 using Example.SNRReduction;
 
 namespace Example.SNRReduction.Services;
@@ -11,50 +14,253 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
 {
     private readonly ILog<SignalNoiseRatioOptimizer> _log = log;
     private ControlSweepOptions _controlSweepOptions = controlSweepOptions;
-    private readonly IAudioLevelMeterRecorderService audioLevelMeterRecorderService = audioLevelMeterRecorderService;
-    
-    public List<ControlLevel> FindBestLevelsForControls(ControlSweepOptions options)
+    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService;
+
+    // small no-op logger implementation used when creating helper tools
+    private class NoOpLog<T> : ILog<T>
     {
-           return new List<ControlLevel>()
-           {
-                new ControlLevel("Capture Volume", "Front Left", 32768),
-                new ControlLevel("Capture Volume", "Front Right", 32768)
-           };
+        public void Debug(string message) { }
+        public void Info(string message) { }
+        public void Warn(string message) { }
+        public void Error(string message) { }
+        public void Error(Exception ex, string message) { }
     }
 
-    // public List<SNRSweepResult> SweepControl(AudioCardMixerService probe, int cardIndex, string controlName, MixerControlInfo ch, SoundDeviceSettings soundSettings)
-    // {
-    //     var results = new List<SNRSweepResult>();
-    //     nint min = ch.Min, max = ch.Max;
-    //     long range = (long)(max - min);
-    //     int steps = 5;
-    //     long step = Math.Max(1, range / (steps - 1));
+    public List<ControlLevel> FindBestLevelsForControls(ControlSweepOptions options)
+    {
+        return new List<ControlLevel>()
+        {
+            new ControlLevel("Capture Volume", "Front Left", 32768),
+            new ControlLevel("Capture Volume", "Front Right", 32768)
+        };
+    }
 
-    //     var tools = new SNRTools(LogManager.GetLogger<SNRTools>());
-    //     var resultsPath = Path.Combine(AppContext.BaseDirectory, "logs", "snr-sweep.jsonl");
-    //     var writer = new ResultsWriter(resultsPath);
+    public List<SNRSweepResult> SweepControl(ISoundDevice soundDevice, string mixerElementName, int controlMin, int controlMax, int controlStep, TimeSpan measurementDuration, int measurementCount)
+    {
+        var results = new List<SNRSweepResult>();
+        if (soundDevice == null) return results;
+        if (controlStep == 0) controlStep = 1;
 
-    //     for (long v = (long)min; v <= (long)max; v += step)
-    //     {
-    //         nint val = (nint)v;
-    //         bool ok = probe.TrySetPlaybackVolume(cardIndex, controlName, ch.Name, val);
-    //         if (!ok) ok = probe.TrySetCaptureVolume(cardIndex, controlName, ch.Name, val);
-    //         if (!ok) continue;
+        // Mixer element names to focus on (as requested). These should match your ALSA element names.
+        var sweepControls = new[] {
+            "Headphones",
+            "Aux",
+            "ADC",
+            "DAC",
+            "MixIn PG",
+            "DAC EQ 1",
+            "DAC EQ 2",
+            "DAC EQ 3",
+            "DAC EQ 4",
+            "DAC EQ 5",
+        };
 
-    //         // short measurements
-    //         using var dev1 = AlsaDeviceBuilder.Build(soundSettings);
-    //         double noise = tools.MeasureNoise(dev1, 1);
-    //         using var dev2 = AlsaDeviceBuilder.Build(soundSettings);
-    //         double signal = tools.MeasureSignalAsync(dev2, 1, 1000).GetAwaiter().GetResult();
-    //         double snr = noise <= 0 ? double.PositiveInfinity : 20.0 * Math.Log10(signal / noise);
+        // track current values so when we sweep one control the others remain at last-chosen setting
+        var currentValues = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in sweepControls) currentValues[c] = 0; // initial 0 dB as you described
 
-    //         var res = new SNRSweepResult(controlName, ch.Name, (long)val, signal, noise, snr);
+        // helper to compute average dBFS from readings
+        static double AvgDbfs(List<Example.SNRReduction.Models.AudioMeterLevelReading> r)
+        {
+            if (r == null || r.Count == 0) return double.NaN;
+            double sum = 0; int n = 0;
+            foreach (var it in r)
+            {
+                if (!double.IsNaN(it.LeftDbfs)) { sum += it.LeftDbfs; n++; }
+                if (!double.IsNaN(it.RightDbfs)) { sum += it.RightDbfs; n++; }
+            }
+            return n == 0 ? double.NaN : sum / n;
+        }
 
-    //         results.Add(res);
-    //         try { writer.Append(res); } catch (Exception ex) { _log.Warn($"Failed to write sweep result: {ex.Message}"); }
-    //     }
+        // helper to generate a short tone wav in memory
+        static byte[] GenerateToneWav(int sampleRate, int channels, int bitsPerSample, double freq, int seconds, double amplitude)
+        {
+            using var ms = new MemoryStream();
+            using var bw = new BinaryWriter(ms);
+            int byteRate = sampleRate * channels * bitsPerSample / 8;
+            int blockAlign = channels * bitsPerSample / 8;
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+            bw.Write(36 + sampleRate * seconds * blockAlign);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
+            bw.Write(16);
+            bw.Write((short)1);
+            bw.Write((short)channels);
+            bw.Write(sampleRate);
+            bw.Write(byteRate);
+            bw.Write((short)blockAlign);
+            bw.Write((short)bitsPerSample);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+            int dataSize = sampleRate * seconds * blockAlign;
+            bw.Write(dataSize);
+            int totalFrames = sampleRate * seconds;
+            for (int i = 0; i < totalFrames; i++)
+            {
+                double t = i / (double)sampleRate;
+                double s = Math.Sin(2.0 * Math.PI * freq * t) * amplitude;
+                short sample = (short)(s * short.MaxValue);
+                for (int ch = 0; ch < channels; ch++) bw.Write(sample);
+            }
+            return ms.ToArray();
+        }
 
-    //     return results;
-    // }
+        // tone params
+        int sampleRate = 48000, channels = 2, bits = 16;
+        double toneFreq = 1000.0;
+        int measureSeconds = Math.Max(1, (int)Math.Ceiling(measurementDuration.TotalSeconds));
+
+        // restore card state once before the entire sweep run
+        try
+        {
+            const string statePath = "/home/pistomp/pi-stomp/setup/audio/0-db.state";
+            _log.Info($"Restoring ALSA state from: {statePath} before sweep run");
+            soundDevice.RestoreStateFromAlsactlFile(statePath);
+        }
+        catch (Exception rex)
+        {
+            _log.Error(rex, "Failed to restore ALSA state before sweep run");
+        }
+
+        // measure a reference signal at the baseline state so we can confirm
+        // that signal strength does not drop while we try to reduce noise.
+        double referenceSignalDb = double.NaN;
+        try
+        {
+            var refTone = GenerateToneWav(sampleRate, channels, bits, toneFreq, measureSeconds, 0.5);
+            List<Example.SNRReduction.Models.AudioMeterLevelReading> refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+            var refTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, "ReferenceSignal"));
+            try
+            {
+                using var msRef = new MemoryStream(refTone);
+                soundDevice.Play(msRef, System.Threading.CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Reference signal play failed");
+            }
+            try { refReadings = refTask.Result; } catch { refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+            referenceSignalDb = AvgDbfs(refReadings);
+            _log.Info($"Reference signal level: {referenceSignalDb:F2} dBFS");
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Reference measurement failed");
+        }
+
+        // iterate controls; for each, sweep its range while keeping others at currentValues
+        foreach (var control in sweepControls)
+        {
+            for (int val = controlMin; val <= controlMax; val += controlStep)
+            {
+                try
+                {
+                    // set other controls to their current values first
+                    foreach (var kv in currentValues)
+                    {
+                        try
+                        {
+                            soundDevice.SetSimpleElementValue(kv.Key, "Front Left", (nint)kv.Value);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Error(ex, $"Failed to set {kv.Key} Front Left to {kv.Value}");
+                        }
+                        try
+                        {
+                            soundDevice.SetSimpleElementValue(kv.Key, "Front Right", (nint)kv.Value);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Error(ex, $"Failed to set {kv.Key} Front Right to {kv.Value}");
+                        }
+                    }
+
+                    // set the control under test to new value
+                    try
+                    {
+                        soundDevice.SetSimpleElementValue(control, "Front Left", (nint)val);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, $"Failed to set {control} Front Left to {val}");
+                    }
+                    try
+                    {
+                        soundDevice.SetSimpleElementValue(control, "Front Right", (nint)val);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, $"Failed to set {control} Front Right to {val}");
+                    }
+
+                    // settle
+                    Thread.Sleep(150);
+
+                    // measure noise (no tone)
+                    List<Example.SNRReduction.Models.AudioMeterLevelReading> noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                    var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control}={val}"));
+                    try { noiseReadings = noiseTask.Result; } catch { noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+
+                    double noiseDb = AvgDbfs(noiseReadings);
+
+                    // generate tone and play while recording
+                    var tone = GenerateToneWav(sampleRate, channels, bits, toneFreq, measureSeconds, 0.5);
+                    List<Example.SNRReduction.Models.AudioMeterLevelReading> sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                    var recordTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Signal {control}={val}"));
+                    try
+                    {
+                        // play tone (blocking until done)
+                        using var msTone = new MemoryStream(tone);
+                        soundDevice.Play(msTone, System.Threading.CancellationToken.None);
+                    }
+                    catch { }
+                    try { sigReadings = recordTask.Result; } catch { sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+
+                    double signalDb = AvgDbfs(sigReadings);
+
+                    double snrDb = double.IsNaN(signalDb) || double.IsNaN(noiseDb) ? double.NaN : (signalDb - noiseDb);
+
+                    // compare signal to reference and warn if the signal dropped
+                    try
+                    {
+                        if (!double.IsNaN(referenceSignalDb) && !double.IsNaN(signalDb))
+                        {
+                            double delta = signalDb - referenceSignalDb;
+                            if (delta < -1.0)
+                            {
+                                _log.Warn($"Signal level dropped by {Math.Abs(delta):F2} dB from reference for {control}={val}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, "Failed while comparing signal to reference");
+                    }
+
+                    results.Add(new SNRSweepResult(control, "Both", val, signalDb, noiseDb, snrDb));
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error(ex, $"Sweep error for control {control} value {val}");
+                }
+            }
+
+            // pick best value for this control (highest SNR) and keep it
+            double bestSNR = double.NegativeInfinity; int bestVal = currentValues[control];
+            foreach (var r in results)
+            {
+                if (!string.Equals(r.ControlName, control, StringComparison.OrdinalIgnoreCase)) continue;
+                if (double.IsNaN(r.SNRdB)) continue;
+                if (r.SNRdB > bestSNR) { bestSNR = r.SNRdB; bestVal = (int)r.Value; }
+            }
+            currentValues[control] = bestVal;
+            // ensure device uses bestVal
+            try { soundDevice.SetSimpleElementValue(control, "Front Left", (nint)bestVal); } catch { }
+            try { soundDevice.SetSimpleElementValue(control, "Front Right", (nint)bestVal); } catch { }
+        }
+
+
+        return results;
+    }
 
 }

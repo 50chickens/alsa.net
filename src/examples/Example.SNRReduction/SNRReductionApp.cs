@@ -21,7 +21,7 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService con
             _log.Info("BaselineOnly option set; skipping control sweep.");
             fileNameToStoreMeasurements = $"baseline_{timestamp}.json";
             _measurementResults.Readings = GetBaseLineReadings();
-            new ResultsWriter(fileNameToStoreMeasurements).Append(_measurementResults);
+            new JsonWriter(fileNameToStoreMeasurements).Append(_measurementResults);
             _log.Info($"Baseline measurements written to: {fileNameToStoreMeasurements}");
             return;
         }

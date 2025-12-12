@@ -94,5 +94,11 @@ public interface ISoundDevice : IDisposable
     /// </summary>
     /// <returns>An integer status code; non-negative on success.</returns>
     public int SetSimpleElementValue(string controlName, string channelName, nint value);
+    /// <summary>
+    /// Restore mixer state from an alsactl-style state file (e.g. saved by alsactl) by applying control values.
+    /// Implementations should attempt to apply integer and boolean control values and skip unsupported entries.
+    /// </summary>
+    /// <param name="stateFilePath">Path to state file.</param>
+    void RestoreStateFromAlsactlFile(string stateFilePath);
     
 }

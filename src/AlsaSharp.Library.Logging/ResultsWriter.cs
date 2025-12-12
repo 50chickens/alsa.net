@@ -2,14 +2,13 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
 
-namespace Example.SNRReduction.Services;
+namespace AlsaSharp.Library.Logging;
 
 /// <summary>
 /// Writes results to a file in JSON format.
 /// </summary>
-public class ResultsWriter(string path)
+public class JsonWriter(string path)
 {
     private readonly string _path = path ?? throw new ArgumentNullException("Path cannot be null");
     private readonly object _lock = new object();

@@ -15,14 +15,6 @@ namespace Example.SNRReduction;
 
 internal class Program
 {
-    // static void Main(string[] args)
-    //     {
-    //         var builder = Host.CreateApplicationBuilder(args);
-    //         builder.Services.AddHostedService<AlsaHintWorker>();
-    //         //builder.Services.AddHintService(HintServiceBuilder.Build);
-    //         var host = builder.Build();
-    //         host.Run();
-    //     }
     private static void Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
