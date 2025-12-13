@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AlsaSharp.Library.Native
+namespace AlsaSharp.Core.Native
 {
 	/// <summary>
 	/// Represents the outcome of a native diagnostic invocation including success flag, result and optional error message.

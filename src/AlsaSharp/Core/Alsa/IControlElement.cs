@@ -1,3 +1,5 @@
+using AlsaSharp.Library.Audio;
+
 namespace AlsaSharp.Core.Alsa;
 
 /// <summary>

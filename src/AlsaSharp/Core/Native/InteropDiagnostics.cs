@@ -1,4 +1,4 @@
-namespace AlsaSharp.Library.Native
+namespace AlsaSharp.Core.Native
 {
     /// <summary>
     /// Public, minimal wrappers that expose safe diagnostics for a subset of libasound

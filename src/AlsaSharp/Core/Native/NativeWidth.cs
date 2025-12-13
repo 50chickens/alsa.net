@@ -1,4 +1,4 @@
-﻿namespace AlsaSharp.Library.Native;
+﻿namespace AlsaSharp.Core.Native;
 
 static class NativeWidth
 {

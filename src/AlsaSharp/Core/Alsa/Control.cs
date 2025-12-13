@@ -1,6 +1,4 @@
-using AlsaSharp.Library.Native;
-using System;
-using System.Collections.Generic;
+using AlsaSharp.Core.Native;
 using System.Runtime.InteropServices;
 
 namespace AlsaSharp.Core.Alsa;

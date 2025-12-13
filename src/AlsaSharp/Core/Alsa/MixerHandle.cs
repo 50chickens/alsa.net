@@ -1,4 +1,4 @@
-using AlsaSharp.Library.Native;
+using AlsaSharp.Core.Native;
 using System;
 
 namespace AlsaSharp.Core.Alsa

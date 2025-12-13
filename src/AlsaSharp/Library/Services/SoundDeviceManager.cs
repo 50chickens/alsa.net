@@ -1,7 +1,8 @@
-using AlsaSharp.Core.Alsa;
+using AlsaSharp.Core.Native;
+using AlsaSharp.Library.Audio;
 using AlsaSharp.Library.Logging;
-using AlsaSharp.Library.Native;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services
 {
@@ -11,6 +12,7 @@ namespace AlsaSharp.Library.Services
     public class SoundDeviceManager : ISoundDeviceManager
     {
         private readonly ILog<ISoundDeviceManager> _log;
+        private readonly Microsoft.Extensions.Logging.ILogger<SoundDeviceManager>? _logger;
 
         /// <summary>
         /// Creates a new instance of the Card class.
@@ -18,10 +20,10 @@ namespace AlsaSharp.Library.Services
         /// <param name="log">Logger instance scoped to this type.</param>
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
-        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name)
+        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name, Microsoft.Extensions.Logging.ILogger<SoundDeviceManager>? logger = null)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
-            
+            _logger = logger;
         }
         
         /// <summary>
@@ -82,7 +84,7 @@ namespace AlsaSharp.Library.Services
                         if (hasVolume <= 0)
                         {
                             // Element reports playback channel but not volume; skip.
-                            _log.Warn($"[ALSA] simpleElement='{simpleElementName}' has playback channel but no playback volume support; skipping channel={ch}.");
+                            _logger?.LogWarning("[ALSA] simpleElement='{SimpleElement}' has playback channel but no playback volume support; skipping channel={Channel}.", simpleElementName, ch);
                             continue;
                         }
 
@@ -95,7 +97,7 @@ namespace AlsaSharp.Library.Services
                             returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, ch, &raw);
                             if (returnCode < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(returnCode)}");
+                                _logger?.LogWarning("[ALSA] snd_mixer_selem_get_playback_volume failed for control='{SimpleElement}' channel={Channel}: {Error}", simpleElementName, ch, InteropAlsa.StrError(returnCode));
                                 continue;
                             }
 
@@ -103,7 +105,7 @@ namespace AlsaSharp.Library.Services
                             returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
                             if (returnCode < 0)
                             {
-                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{simpleElementName}' channel={ch}: {InteropAlsa.StrError(returnCode)}");
+                                _logger?.LogWarning("[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{SimpleElement}' channel={Channel}: {Error}", simpleElementName, ch, InteropAlsa.StrError(returnCode));
                                 continue;
                             }
 

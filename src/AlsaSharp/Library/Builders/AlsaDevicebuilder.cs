@@ -11,5 +11,6 @@ public static class AlsaDeviceBuilder
     /// </summary>
     /// <param name="settings">Sound device configuration to use.</param>
     /// <returns>Sound device ready to use.</returns>
-    public static ISoundDevice Build(SoundDeviceSettings settings) => new UnixSoundDevice(settings);
+    public static ISoundDevice Build(SoundDeviceSettings settings, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null)
+        => new UnixSoundDevice(settings, loggerFactory is null ? null : Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<UnixSoundDevice>(loggerFactory));
 }

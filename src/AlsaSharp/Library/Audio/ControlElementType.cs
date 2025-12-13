@@ -1,4 +1,4 @@
-namespace AlsaSharp.Core.Alsa;
+namespace AlsaSharp.Library.Audio;
 
 /// <summary>
 /// The element data type used by a control element.

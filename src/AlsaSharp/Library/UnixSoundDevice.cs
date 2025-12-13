@@ -1,10 +1,12 @@
-﻿using AlsaSharp.Library.Native;
+﻿using AlsaSharp.Core.Native;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 
 namespace AlsaSharp.Library;
 
-class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
+class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? log = null) : ISoundDevice
 {
+    private readonly ILogger<UnixSoundDevice>? _log = log;
     static readonly object PlaybackInitializationLock = new();
     static readonly object RecordingInitializationLock = new();
     static readonly object MixerInitializationLock = new();
@@ -126,7 +128,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         fixed (int* dirP = &dir)
         {
             int rv = InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP);
-            Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {rv}, frames={frames}");
+            _log?.LogDebug("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
             ThrowErrorMessage(rv, ExceptionMessages.CanNotGetPeriodSize);
         }
 
@@ -138,7 +140,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested && wavStream.Read(readBuffer) != 0)
             {
                 nint rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
-                Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_writei -> {rv} (frames requested={frames})");
+                _log?.LogDebug("[ALSA DEBUG] snd_pcm_writei -> {Rv}, frames requested={Frames}", rv, frames);
                 ThrowErrorMessage(rv, ExceptionMessages.CanNotWriteToDevice);
             }
         }
@@ -150,7 +152,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         fixed (int* dirP = &dir)
         {
             int rv = InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP);
-            Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {rv}, frames={frames}");
+            _log?.LogDebug("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
             ThrowErrorMessage(rv, ExceptionMessages.CanNotGetPeriodSize);
         }
 
@@ -162,14 +164,14 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested)
             {
                 nint rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
-                Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_readi -> {rv} (frames requested={frames})");
+                _log?.LogDebug("[ALSA DEBUG] snd_pcm_readi -> {Rv}, frames requested={Frames}", rv, frames);
                 if (rv < 0)
                 {
                     // try to recover from transient I/O errors (eg. -EIO)
                     int rec = InteropAlsa.snd_pcm_recover(_recordingPcm, (int)rv, 0);
                     if (rec < 0)
                     {
-                        Console.Error.WriteLine($"[ALSA ERROR] snd_pcm_recover failed: {InteropAlsa.StrError(rec)}");
+                        _log?.LogError("[ALSA ERROR] snd_pcm_recover failed: {Error}", InteropAlsa.StrError(rec));
                         ThrowErrorMessage(rec, ExceptionMessages.CanNotReadFromDevice);
                     }
                     // recovered — try next read iteration
@@ -202,7 +204,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                     int rec = InteropAlsa.snd_pcm_recover(_recordingPcm, (int)rv, 0);
                     if (rec < 0)
                     {
-                        Console.Error.WriteLine($"[ALSA ERROR] snd_pcm_recover failed: {InteropAlsa.StrError(rec)}");
+                        _log?.LogError("[ALSA ERROR] snd_pcm_recover failed: {Error}", InteropAlsa.StrError(rec));
                         ThrowErrorMessage(rec, ExceptionMessages.CanNotReadFromDevice);
                     }
                     continue;
@@ -239,7 +241,7 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         int hwRv = InteropAlsa.snd_pcm_hw_params(pcm, @params);
         if (hwRv < 0)
         {
-            Console.Error.WriteLine($"[ALSA DEBUG] snd_pcm_hw_params returned {hwRv}, attempting snd_pcm_recover");
+            _log?.LogDebug("[ALSA DEBUG] snd_pcm_hw_params returned {HwRv}, attempting snd_pcm_recover", hwRv);
             int rec = InteropAlsa.snd_pcm_recover(pcm, hwRv, 0);
             if (rec < 0)
             {
@@ -351,21 +353,21 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                 // Draining can block indefinitely with some plugins (eg. pipewire); dropping
                 // is faster and avoids hang during shutdown.
                 var rc = InteropAlsa.snd_pcm_drop(_playbackPcm);
-                if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop playback device: {InteropAlsa.StrError(rc)}");
+                if (rc < 0) _log?.LogError("[ALSA ERROR] Can not drop playback device: {Error}", InteropAlsa.StrError(rc));
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_drop playback: {ex.Message}");
+                _log?.LogError(ex, "[ALSA ERROR] Exception during snd_pcm_drop playback: {Message}", ex.Message);
             }
 
             try
             {
                 var rc2 = InteropAlsa.snd_pcm_close(_playbackPcm);
-                if (rc2 < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close playback device: {InteropAlsa.StrError(rc2)}");
+                if (rc2 < 0) _log?.LogError("[ALSA ERROR] Can not close playback device: {Error}", InteropAlsa.StrError(rc2));
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_close playback: {ex.Message}");
+                _log?.LogError(ex, "[ALSA ERROR] Exception during snd_pcm_close playback: {Message}", ex.Message);
             }
 
             _playbackPcm = default;
@@ -393,21 +395,21 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                 // Prefer dropping the PCM instead of draining to avoid blocking in
                 // plugins like pipewire when shutting down. Drop stops immediately.
                 var rc = InteropAlsa.snd_pcm_drop(_recordingPcm);
-                if (rc < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not drop recording device: {InteropAlsa.StrError(rc)}");
+                if (rc < 0) _log?.LogError("[ALSA ERROR] Can not drop recording device: {Error}", InteropAlsa.StrError(rc));
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_drop recording: {ex.Message}");
+                _log?.LogError(ex, "[ALSA ERROR] Exception during snd_pcm_drop recording: {Message}", ex.Message);
             }
 
             try
             {
                 var rc2 = InteropAlsa.snd_pcm_close(_recordingPcm);
-                if (rc2 < 0) Console.Error.WriteLine($"[ALSA ERROR] Can not close recording device: {InteropAlsa.StrError(rc2)}");
+                if (rc2 < 0) _log?.LogError("[ALSA ERROR] Can not close recording device: {Error}", InteropAlsa.StrError(rc2));
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ALSA ERROR] Exception during snd_pcm_close recording: {ex.Message}");
+                _log?.LogError(ex, "[ALSA ERROR] Exception during snd_pcm_close recording: {Message}", ex.Message);
             }
 
             _recordingPcm = default;
@@ -458,14 +460,14 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         CloseMixer();
     }
 
-    static void ThrowErrorMessage(nint errorNum, string message)
+    void ThrowErrorMessage(nint errorNum, string message)
     {
         if (errorNum >= 0)
             return;
 
         var errno = (int)errorNum;
         var errorMsg = InteropAlsa.StrError(errno);
-        Console.Error.WriteLine($"[ALSA ERROR] {message}. Error {errno}. {errorMsg}");
+        _log?.LogError("[ALSA ERROR] {Message}. Error {Errno}. {ErrorMsg}", message, errno, errorMsg);
         throw new AlsaDeviceException($"{message}. Error {errno}. {errorMsg}.");
     }
 
@@ -539,13 +541,13 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                         }
                         catch (Exception ex)
                         {
-                            Console.Error.WriteLine($"[ALSA ERROR] SetSimpleElementValue switch attempt failed for '{simpleElementName}': {ex.Message}");
+                            _log?.LogError(ex, "[ALSA ERROR] SetSimpleElementValue switch attempt failed for '{Name}': {Message}", simpleElementName, ex.Message);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[ALSA ERROR] Error iterating mixer elements: {ex.Message}");
+                    _log?.LogError(ex, "[ALSA ERROR] Error iterating mixer elements: {Message}", ex.Message);
                 }
 
                 elem = InteropAlsa.snd_mixer_elem_next(elem);
@@ -568,11 +570,11 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         }
     }   
 
-    public void RestoreStateFromAlsactlFile(string stateFilePath)
+    public void RestoreStateFromAlsaStateFile(string stateFilePath)
     {
         if (string.IsNullOrEmpty(stateFilePath) || !File.Exists(stateFilePath))
         {
-            Console.Error.WriteLine($"[ALSA INFO] State file not found: {stateFilePath}");
+            _log?.LogInformation("[ALSA INFO] State file not found: {Path}", stateFilePath);
             return;
         }
 
@@ -622,12 +624,12 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                             if (int.TryParse(idxPart, out int idx) && idx >= 0)
                             {
                                 var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
-                                try { SetSimpleElementValue(currentName, ch, v); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName}:{ch} -> {v}: {ex.Message}"); }
+                                try { SetSimpleElementValue(currentName, ch, v); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, v); }
                             }
                         }
                         else
                         {
-                            try { SetSimpleElementValue(currentName, string.Empty, v); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName} -> {v}: {ex.Message}"); }
+                            try { SetSimpleElementValue(currentName, string.Empty, v); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, v); }
                         }
                         continue;
                     }
@@ -641,18 +643,18 @@ class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
                             if (int.TryParse(idxPart, out int idx) && idx >= 0)
                             {
                                 var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
-                                try { SetSimpleElementValue(currentName, ch, intVal); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName}:{ch} -> {intVal}: {ex.Message}"); }
+                                try { SetSimpleElementValue(currentName, ch, intVal); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, intVal); }
                             }
                         }
                         else
                         {
-                            try { SetSimpleElementValue(currentName, string.Empty, intVal); } catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] RestoreState: failed to set {currentName} -> {intVal}: {ex.Message}"); }
+                            try { SetSimpleElementValue(currentName, string.Empty, intVal); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, intVal); }
                         }
                         continue;
                     }
 
                     // could not parse (enum or string) - skip
-                    Console.Error.WriteLine($"[ALSA INFO] RestoreState: skipping unsupported value for control '{currentName}': {rawVal}");
+                    _log?.LogInformation("[ALSA INFO] RestoreState: skipping unsupported value for control '{Name}': {Raw}", currentName, rawVal);
                 }
             }
 

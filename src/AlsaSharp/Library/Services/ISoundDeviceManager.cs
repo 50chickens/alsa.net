@@ -1,4 +1,4 @@
-using AlsaSharp.Core.Alsa;
+using AlsaSharp.Library.Audio;
 
 namespace AlsaSharp.Library.Services
 {

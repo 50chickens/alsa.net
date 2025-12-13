@@ -1,14 +1,19 @@
-using AlsaSharp.Library.Native;
-using System;
-using System.Runtime.InteropServices;
+using AlsaSharp.Core.Alsa;
+using AlsaSharp.Core.Native;
 
-namespace AlsaSharp.Core.Alsa
+namespace AlsaSharp.Library.Services
 {
     /// <summary>
     /// Encapsulates logic to set mixer control values (volume/switch) on elements.
     /// </summary>
-    public class MixerSetter
+    public class MixerService
     {
+        private readonly Microsoft.Extensions.Logging.ILogger<MixerService>? _log;
+
+        public MixerService(Microsoft.Extensions.Logging.ILogger<MixerService>? log = null)
+        {
+            _log = log;
+        }
         /// <summary>Attempts to set playback volume on a mixer element.</summary>
         /// <returns>True on success, false otherwise.</returns>
         public bool TrySetPlaybackVolume(int card, string controlName, string channelName, nint value)

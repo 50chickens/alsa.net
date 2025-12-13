@@ -97,6 +97,6 @@ public interface ISoundDevice : IDisposable
     /// Implementations should attempt to apply integer and boolean control values and skip unsupported entries.
     /// </summary>
     /// <param name="stateFilePath">Path to state file.</param>
-    void RestoreStateFromAlsactlFile(string stateFilePath);
+    void RestoreStateFromAlsaStateFile(string stateFilePath);
     
 }

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace AlsaSharp.Library.Native;
+namespace AlsaSharp.Core.Native;
 
 /// <summary>
 /// Provides P/Invoke signatures for libasound (ALSA) functions used by this library.

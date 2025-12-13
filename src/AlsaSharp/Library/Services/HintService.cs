@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using AlsaSharp.Core.Alsa;
-using AlsaSharp.Library.Native;
+using AlsaSharp.Core.Native;
 using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services

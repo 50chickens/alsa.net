@@ -3,7 +3,7 @@ using NUnit.Framework;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Tests.NUnit;
 using AlsaSharp.Tests.Library;
-using AlsaSharp.Library.Native;
+using AlsaSharp.Core.Native;
 
 namespace AlsaSharp.Tests
 {

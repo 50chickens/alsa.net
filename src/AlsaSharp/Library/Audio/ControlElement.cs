@@ -1,4 +1,6 @@
-namespace AlsaSharp.Core.Alsa;
+using AlsaSharp.Core.Alsa;
+
+namespace AlsaSharp.Library.Audio;
 
 /// <summary>
 /// Basic implementation of <see cref="IControlElement"/>.

@@ -61,7 +61,7 @@ public class SNRReductionWorker : BackgroundService
                 string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
                 string defaultStateFileName = System.IO.Path.Combine(folderPath, _snrReductionServiceOptions.DefaultAudioStateFileName);
                 _log.Info($"Restoring ALSA state from: {defaultStateFileName}");
-                _soundDevice.RestoreStateFromAlsactlFile(defaultStateFileName);
+                _soundDevice.RestoreStateFromAlsaStateFile(defaultStateFileName);
             }
             catch (Exception ex)
             {

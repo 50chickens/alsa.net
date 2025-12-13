@@ -101,7 +101,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
         {
             const string statePath = "/home/pistomp/pi-stomp/setup/audio/0-db.state";
             _log.Info($"Restoring ALSA state from: {statePath} before sweep run");
-            soundDevice.RestoreStateFromAlsactlFile(statePath);
+            soundDevice.RestoreStateFromAlsaStateFile(statePath);
         }
         catch (Exception rex)
         {
