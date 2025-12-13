@@ -1,5 +1,5 @@
 ﻿using AlsaSharp;
-using AlsaSharp.Internal;
+using AlsaSharp.Library.Builders;
 
 namespace Example.Configuration;
 

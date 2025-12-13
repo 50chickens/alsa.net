@@ -1,4 +1,4 @@
-using AlsaSharp.Internal.Audio;
+using AlsaSharp.Library.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

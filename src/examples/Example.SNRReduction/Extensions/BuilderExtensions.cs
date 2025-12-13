@@ -1,12 +1,5 @@
-using System;
-using Example.SNRReduction.Audio;
-using Example.SNRReduction.Services;
 using Example.SNRReduction.Models;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Example.SNRReduction.Extensions;
-
-
 static class AddAudioServiceExtension
 {
     public static IServiceCollection AddAudioService(this IServiceCollection services, Action<SNRReductionServiceOptions> configureOptions)

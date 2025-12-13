@@ -1,6 +1,4 @@
 ﻿
-using AlsaSharp.Internal;
-
 namespace AlsaSharp;
 
 /// <summary>

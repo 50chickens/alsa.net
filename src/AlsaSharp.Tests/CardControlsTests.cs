@@ -4,7 +4,8 @@ using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 using System.Linq;
-using AlsaSharp.Internal.Audio; 
+using AlsaSharp.Library.Builders;
+using AlsaSharp.Library.Services;
 
 namespace AlsaSharp.Tests
 {

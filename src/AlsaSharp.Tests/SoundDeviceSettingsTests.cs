@@ -1,4 +1,4 @@
-﻿using AlsaSharp.Internal;
+﻿using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;

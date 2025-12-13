@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AlsaSharp.Internal.Audio;
+using AlsaSharp.Library.Services;
 
 namespace Example.AlsaHints;
 

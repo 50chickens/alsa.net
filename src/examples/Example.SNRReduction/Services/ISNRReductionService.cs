@@ -1,5 +1,4 @@
 ﻿using AlsaSharp;
-using AlsaSharp.Internal;
 using Example.SNRReduction.Services;
 
 namespace Example.SNRReduction.Interfaces;

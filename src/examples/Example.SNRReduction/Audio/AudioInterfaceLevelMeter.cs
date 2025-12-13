@@ -1,4 +1,5 @@
 using AlsaSharp;
+using AlsaSharp.Library;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Services;
 
@@ -61,7 +62,7 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
         {
             // expected when token cancels; avoid spamming logs with expected cancellations
         }
-        catch (AlsaSharp.Internal.AlsaDeviceException ex)
+        catch (AlsaDeviceException ex)
         {
             _log?.Warn($"Recording task failed: {ex.Message}");
         }

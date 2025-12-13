@@ -1,6 +1,5 @@
-using System.Security.AccessControl;
 using AlsaSharp;
-using AlsaSharp.Internal;
+using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Audio;
 using Example.SNRReduction.Extensions;
