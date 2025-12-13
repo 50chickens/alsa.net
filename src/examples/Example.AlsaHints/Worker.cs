@@ -22,7 +22,8 @@ public class AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintSe
             _log.LogInformation("Getting ALSA hints...");
             var hints = _alsaHintService.GetCanonicalHints();
             var combined = new { Alsactl = cards, Hints = hints };
-            Console.WriteLine(JsonSerializer.Serialize(combined, options));
+            var logoutput = new YamlDotNet.Serialization.Serializer().Serialize(combined);
+            _log.LogInformation(logoutput);
         }
         finally
         {

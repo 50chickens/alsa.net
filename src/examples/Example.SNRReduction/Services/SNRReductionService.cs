@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using Example.SNRReduction.Interfaces;
+﻿using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Models;
 using AlsaSharp.Library.Logging;
 using AlsaSharp;
-using Example.SNRReduction;
 
 namespace Example.SNRReduction.Services;
 
@@ -17,15 +12,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService;
 
     // small no-op logger implementation used when creating helper tools
-    private class NoOpLog<T> : ILog<T>
-    {
-        public void Debug(string message) { }
-        public void Info(string message) { }
-        public void Warn(string message) { }
-        public void Error(string message) { }
-        public void Error(Exception ex, string message) { }
-    }
-
+    
     public List<ControlLevel> FindBestLevelsForControls(ControlSweepOptions options)
     {
         return new List<ControlLevel>()
@@ -197,7 +184,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                     Thread.Sleep(150);
 
                     // measure noise (no tone)
-                    List<Example.SNRReduction.Models.AudioMeterLevelReading> noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                    List<AudioMeterLevelReading> noiseReadings = [];
                     var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control}={val}"));
                     try { noiseReadings = noiseTask.Result; } catch { noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
 
