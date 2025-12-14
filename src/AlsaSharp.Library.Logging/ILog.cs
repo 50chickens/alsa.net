@@ -11,6 +11,7 @@ namespace AlsaSharp.Library.Logging
         void Warn(string message);
         void Error(string message);
         void Error(Exception ex, string message);
+        void Trace(string message);
     }
 
     

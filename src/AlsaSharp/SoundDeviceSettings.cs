@@ -57,4 +57,10 @@ public class SoundDeviceSettings()
     /// Card index (hw:<index>).
     /// </summary>
     public int? CardIndex { get; set; }
+
+    /// <summary>
+    /// Path to the baseline JSON file that was (or will be) created for this device.
+    /// When set by callers/builders this can be used by workers to append measurement entries.
+    /// </summary>
+    public string? BaselineFilePath { get; set; }
 }

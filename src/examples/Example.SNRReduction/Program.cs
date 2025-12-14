@@ -47,14 +47,15 @@ internal class Program
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
 
         // Register ALSA hint service and build ISoundDevice instances for all discovered cards
-        builder.Services.AddHintService(HintServiceBuilder.Build);
-        builder.Services.AddSingleton<IEnumerable<ISoundDevice>>(serviceProvider => UnixSoundDeviceBuilder.Build(serviceProvider));
+        var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
+        var measurementFolder = snrSection.GetValue<string>("MeasurementFolder") ?? "~/.SNRReduction";
+        builder.Services.AddUnixSoundDeviceBuilder(measurementFolder);
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Logging.ClearProviders();
 
-        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
         builder.Services.AddAudioService(options =>
         {

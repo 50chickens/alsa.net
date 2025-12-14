@@ -12,24 +12,40 @@ namespace AlsaSharp.Library.Builders;
 public class UnixSoundDeviceBuilder
 {
     /// <summary>
-    /// Create and connect a sound device for each discovered ALSA card.
-    /// </summary>
-    /// <returns>Sound device instances ready to use.</returns>
-    public static IEnumerable<ISoundDevice> Build()
-    {
-        return GetSoundDevices();
-    }
-    /// <summary>
     /// Build sound device instances using the ALSA hint service (alsahints).
     /// </summary>
     public static IEnumerable<ISoundDevice> Build(IServiceProvider services)
     {
-        if (services == null) return GetSoundDevices();
-        var hintService = services.GetService<IHintService>();
-        if (hintService == null) return GetSoundDevices();
+        // Back-compat: call the overload without measurement folder.
+        return Build(services, null);
+    }
 
+    /// <summary>
+    /// Build sound device instances and optionally write baseline summary and per-device header JSON files
+    /// into the provided measurement folder. When measurementFolder is null no files are written.
+    /// </summary>
+    public static IEnumerable<ISoundDevice> Build(IServiceProvider services, string? measurementFolder)
+    {
+        if (services == null) throw new ArgumentNullException(nameof(services));
+
+        var hintService = services.GetService<IHintService>();
+        if (hintService == null)
+            throw new InvalidOperationException("IHintService is not registered. Call AddUnixSoundDeviceBuilder() to register hint service before building devices.");
+
+        var log = services.GetService<AlsaSharp.Library.Logging.ILog<UnixSoundDeviceBuilder>>();
+
+        // Prepare measurement folder and timestamp if provided
+        string? timestamp = null;
+        if (!string.IsNullOrWhiteSpace(measurementFolder))
+        {
+            measurementFolder = measurementFolder.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            try { Directory.CreateDirectory(measurementFolder); } catch { }
+            timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        }
+
+        var devicesMetadata = new List<object>();
         var list = new List<ISoundDevice>();
-            foreach (var card in hintService.CardInfos)
+        foreach (var card in hintService.CardInfos)
         {
                 var name = card.Id ?? card.Name ?? $"card{card.Index}";
                 var soundDeviceSettings = new SoundDeviceSettings
@@ -42,60 +58,51 @@ public class UnixSoundDeviceBuilder
                     CardLongName = card.LongName,
                     CardIndex = card.Index
                 };
+                // If measurement folder provided, compute per-device baseline file path and write header
+                if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
+                {
+                    var fileBase = SanitizeFileName(soundDeviceSettings.CardName ?? soundDeviceSettings.CardId ?? name);
+                    var jsonPath = Path.Combine(measurementFolder, $"baseline_{timestamp}_{fileBase}.json");
+                    soundDeviceSettings.BaselineFilePath = jsonPath;
+                    try
+                    {
+                        var jsonWriter = new AlsaSharp.Library.Logging.JsonWriter(jsonPath);
+                        jsonWriter.Append(new { Device = (object?)null, Card = new { Id = soundDeviceSettings.CardId, Name = soundDeviceSettings.CardName, LongName = soundDeviceSettings.CardLongName, SampleRate = soundDeviceSettings.RecordingSampleRate, BitsPerSample = soundDeviceSettings.RecordingBitsPerSample }, Timestamp = DateTime.UtcNow });
+                    }
+                    catch { }
+                }
+
                 var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
                 var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
-            list.Add(soundDevice);
+                // Log discovered device details here so callers (workers) don't need to duplicate this.
+                try
+                {
+                    log?.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} rate={soundDeviceSettings.RecordingSampleRate} bits={soundDeviceSettings.RecordingBitsPerSample} chans={soundDeviceSettings.RecordingChannels}");
+                }
+                catch { }
+                list.Add(soundDevice);
+                devicesMetadata.Add(new { soundDeviceSettings.CardId, soundDeviceSettings.CardName, soundDeviceSettings.CardLongName, soundDeviceSettings.RecordingDeviceName, soundDeviceSettings.RecordingSampleRate, soundDeviceSettings.RecordingBitsPerSample, soundDeviceSettings.RecordingChannels });
+        }
+
+        // Write a summary JSON into the measurement folder if requested
+        if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
+        {
+            try
+            {
+                var summaryPath = Path.Combine(measurementFolder, $"baseline_summary_{timestamp}.json");
+                var summaryWriter = new AlsaSharp.Library.Logging.JsonWriter(summaryPath);
+                summaryWriter.Append(new { Timestamp = DateTime.UtcNow, Devices = devicesMetadata });
+                log?.Info($"Wrote baseline summary for {devicesMetadata.Count} devices to {summaryPath}");
+            }
+            catch { }
         }
         return list;
     }
-    private static IEnumerable<ISoundDevice> GetSoundDevices()
+
+    private static string SanitizeFileName(string s)
     {
-        var list = new List<ISoundDevice>();
-        int cardIndex = -1;
-
-        // Start enumeration
-        var returnCode = InteropAlsa.snd_card_next(ref cardIndex);
-        if (returnCode < 0)
-            throw new InvalidOperationException($"snd_card_next failed: {InteropAlsa.StrError(returnCode)}");
-
-        while (cardIndex >= 0)
-        {
-            // Obtain the short name for the card via the proper libasound API.
-            IntPtr namePtr = IntPtr.Zero;
-            returnCode = InteropAlsa.snd_card_get_name(cardIndex, out namePtr);
-            if (returnCode < 0)
-                throw new InvalidOperationException($"snd_card_get_name({cardIndex}) failed: {InteropAlsa.StrError(returnCode)}");
-
-            try
-            {
-                var name = Marshal.PtrToStringUTF8(namePtr);
-                if (name == null) throw new InvalidOperationException($"Could not retrieve card name for index {cardIndex}");
-                // Create a new UnixSoundDevice for each card found
-                var soundDeviceSettings = new SoundDeviceSettings
-                {
-                    RecordingDeviceName = $"hw:CARD={name}",
-                    MixerDeviceName = $"hw:CARD={name}",
-                    PlaybackDeviceName = $"hw:CARD={name}",
-                    CardName = name,
-                    CardId = name,
-                    CardLongName = name,
-                    CardIndex = cardIndex
-                };
-                var soundDevice = new UnixSoundDevice(soundDeviceSettings, null);
-                list.Add(soundDevice);
-            }
-            finally
-            {
-                // Free memory allocated by the ALSA helper
-                if (namePtr != IntPtr.Zero)
-                    InteropAlsa.free(namePtr);
-            }
-
-            returnCode = InteropAlsa.snd_card_next(ref cardIndex);
-            if (returnCode < 0)
-                throw new InvalidOperationException($"snd_card_next failed: {InteropAlsa.StrError(returnCode)}");
-        }
-
-        return list;
+        if (string.IsNullOrWhiteSpace(s)) return "unknown";
+        foreach (var c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+        return s.Replace(' ', '_');
     }
 }

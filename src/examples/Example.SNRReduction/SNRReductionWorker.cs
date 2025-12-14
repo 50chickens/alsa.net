@@ -83,53 +83,23 @@ public class SNRReductionWorker : BackgroundService
         
         _log.Info($"Starting measurement: duration={_measureDuration.TotalSeconds}s count={_measurementCount} for {_soundDevices.Count()} devices");
 
-        // Write a summary of discovered devices to a JSON file and log device info
-        try
-        {
-            var summaryPath = Path.Combine(measurementFolder, $"baseline_summary_{_timestamp}.json");
-            var summaryWriter = new AlsaSharp.Library.Logging.JsonWriter(summaryPath);
-            var devicesList = _soundDevices.Select(d => new
-            {
-                CardId = d?.Settings?.CardId,
-                CardName = d?.Settings?.CardName,
-                CardLongName = d?.Settings?.CardLongName,
-                RecordingDeviceName = d?.Settings?.RecordingDeviceName,
-                PlaybackDeviceName = d?.Settings?.PlaybackDeviceName,
-                MixerDeviceName = d?.Settings?.MixerDeviceName,
-                RecordingSampleRate = d?.Settings?.RecordingSampleRate,
-                RecordingBitsPerSample = d?.Settings?.RecordingBitsPerSample,
-                RecordingChannels = d?.Settings?.RecordingChannels
-            }).ToList();
-
-            summaryWriter.Append(new { Timestamp = DateTime.UtcNow, Devices = devicesList });
-            _log.Info($"Wrote baseline summary for {_soundDevices.Count()} devices to {summaryPath}");
-            foreach (var dev in devicesList)
-            {
-                _log.Info($"Discovered device: id={dev.CardId} name={dev.CardName} longname={dev.CardLongName} recording={dev.RecordingDeviceName} rate={dev.RecordingSampleRate} bits={dev.RecordingBitsPerSample} chans={dev.RecordingChannels}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.Warn($"Failed to write baseline summary: {ex.Message}");
-        }
+        // Baseline summary and per-device headers are created by the UnixSoundDeviceBuilder at registration time
 
         foreach (var device in _soundDevices)
         {
             var settings = device?.Settings;
-            var cardId = settings?.CardId ?? "unknown";
-            var cardName = settings?.CardName ?? settings?.RecordingDeviceName ?? "unknown";
-            var cardLong = settings?.CardLongName ?? string.Empty;
-            var rate = settings?.RecordingSampleRate ?? 0u;
-            var bits = settings?.RecordingBitsPerSample ?? 0;
 
-            _log.Info($"Running baseline for device id={cardId} name={cardName} longname={cardLong} rate={rate} bits={bits}");
+            // Prefer baseline file path created by the builder; fallback to worker naming if absent
+            var jsonPath = settings?.BaselineFilePath;
+            if (string.IsNullOrWhiteSpace(jsonPath))
+            {
+                var cardId = settings?.CardId ?? "unknown";
+                var cardName = settings?.CardName ?? settings?.RecordingDeviceName ?? "unknown";
+                var fileBase = SanitizeFileName(cardName ?? cardId ?? "unknown");
+                jsonPath = Path.Combine(measurementFolder, $"baseline_{_timestamp}_{fileBase}.json");
+            }
 
-            // Log device info into JSON and logger
-            var fileBase = SanitizeFileName(cardName ?? cardId ?? "unknown");
-            var jsonPath = Path.Combine(measurementFolder, $"baseline_{_timestamp}_{fileBase}.json");
-            var jsonWriter = new AlsaSharp.Library.Logging.JsonWriter(jsonPath);
-            jsonWriter.Append(new { Device = device?.Settings, Card = new { Id = cardId, Name = cardName, LongName = cardLong, SampleRate = rate, BitsPerSample = bits }, Timestamp = DateTime.UtcNow });
-            _log.Info($"Wrote device header to {jsonPath}");
+            _log.Trace("Running baseline measurement (appending to header file)");
 
             // Create per-device meter and recorder instances
             var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
@@ -137,15 +107,15 @@ public class SNRReductionWorker : BackgroundService
             var meter = new AudioInterfaceLevelMeter(device, meterLog);
             var recorder = new AudioLevelMeterRecorderService(recorderLog, meter, _recorderOptions);
 
-                try
-                {
-                    var results = recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, jsonPath);
-                    _log.Info($"Baseline for device {cardId} completed and written to {jsonPath}");
-                }
-                catch (Exception ex)
-                {
-                    _log.Error(ex, $"Failed to run baseline for device {cardId}");
-                }
+            try
+            {
+                var results = recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, jsonPath);
+                _log.Info($"Baseline completed and written to {jsonPath}");
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Failed to run baseline");
+            }
         }
         
         // If AutoSweep is enabled, run a short quick sweep to verify end-to-end behavior.

@@ -87,6 +87,18 @@ internal static class InteropAlsa
     public static extern unsafe int snd_pcm_hw_params_get_period_size(IntPtr @params, nuint* frames, int* dir);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_pcm_hw_params_free(IntPtr @params);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_get_rate(IntPtr @params, uint* val, int* dir);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_get_channels(IntPtr @params, uint* val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_get_format(IntPtr @params, snd_pcm_format_t* val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_pcm_hw_params_set_period_size_near(IntPtr pcm, IntPtr @params, nuint* frames, int* dir);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]

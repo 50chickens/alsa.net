@@ -1,3 +1,4 @@
+using AlsaSharp.Library.Extensions;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Models;
 
@@ -17,62 +18,26 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
         
         for (int i = 0; i < measurementCount; i++)
         {
-            _log.Info($"Starting measurement {i + 1} of {measurementCount} for duration {measurementDuration.TotalSeconds} seconds...");
-
+            _log.Trace($"Measurement {i + 1}/{measurementCount} ({measurementDuration.TotalSeconds} seconds)");
             AudioMeterLevelReading audioMeterLevelReading = GetAudioMeterLevelReading(measurementDuration);
-
-            // If right channel is NaN, treat device as mono and only log left channel
-            if (double.IsNaN(audioMeterLevelReading.RightDbfs))
-            {
-                _log.Info($"Baseline reading (mono): L={audioMeterLevelReading.LeftDbfs:F2} dBFS");
-            }
-            else
-            {
-                _log.Info($"Baseline reading: L={audioMeterLevelReading.LeftDbfs:F2} dBFS R={audioMeterLevelReading.RightDbfs:F2} dBFS");
-            }
-
-            // Append reading to results file (JsonWriter will create/append)
-            if (string.IsNullOrWhiteSpace(resultFileName))
-            {
-                _log.Warn("No result file name provided - skipping write of measurement.");
-            }
-            else
-            {
-                JsonWriter jsonWriter = new JsonWriter(resultFileName);
-                jsonWriter.Append(audioMeterLevelReading);
-            }
-
+            _log.Info($"Result: {audioMeterLevelReading}. Completed {i + 1}/{measurementCount} ({measurementDuration.TotalSeconds} seconds).");
+            JsonWriter jsonWriter = new JsonWriter(resultFileName);
+            jsonWriter.Append(audioMeterLevelReading);
             _audioLevelReadings.Add(audioMeterLevelReading);
-            _log.Info($"Completed measurement {i + 1} of {measurementCount} for duration {measurementDuration.TotalSeconds} seconds.");
-            // Pause briefly between separate measurements to avoid hammering the audio device
-            System.Threading.Thread.Sleep(1000);
+            Thread.Sleep(1000);
         }
         return _audioLevelReadings;
     }
     public AudioMeterLevelReading GetAudioMeterLevelReading(TimeSpan measurementDuration)
     {
         var (leftDbfs, rightDbfs) = _audioInterfaceLevelMeter.MeasureLevels((int)measurementDuration.TotalMilliseconds);
-
-        double leftRms = double.IsNegativeInfinity(leftDbfs) ? 0.0 : Math.Pow(10.0, leftDbfs / 20.0);
-        double rightRms;
-
-        if (double.IsNaN(rightDbfs))
-        {
-            // mono device - do not compute right RMS
-            rightRms = double.NaN;
-        }
-        else
-        {
-            rightRms = double.IsNegativeInfinity(rightDbfs) ? 0.0 : Math.Pow(10.0, rightDbfs / 20.0);
-        }
-
         AudioMeterLevelReading audioLevelReading = new()
         {
             TimestampUtc = DateTime.UtcNow,
             LeftDbfs = leftDbfs,
             RightDbfs = rightDbfs,
-            LeftRms = leftRms,
-            RightRms = rightRms
+            LeftRms = leftDbfs.ToRms(),
+            RightRms = rightDbfs.ToRms()
         };
 
         return audioLevelReading;
