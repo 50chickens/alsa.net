@@ -37,4 +37,24 @@ public class SoundDeviceSettings()
     /// </summary>
     /// <remarks>check device specification for supported bit depths</remarks>
     public ushort RecordingBitsPerSample { get; set; } = 16;
+
+    /// <summary>
+    /// Card identifier (eg. "Plus").
+    /// </summary>
+    public string? CardId { get; set; }
+
+    /// <summary>
+    /// Card name (human friendly, eg. "JAM Plus").
+    /// </summary>
+    public string? CardName { get; set; }
+
+    /// <summary>
+    /// Card long descriptive name.
+    /// </summary>
+    public string? CardLongName { get; set; }
+
+    /// <summary>
+    /// Card index (hw:<index>).
+    /// </summary>
+    public int? CardIndex { get; set; }
 }

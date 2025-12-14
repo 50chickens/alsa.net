@@ -1,5 +1,6 @@
 using AlsaSharp.Core.Native;
 using System.Runtime.InteropServices;
+using AlsaSharp.Library.Logging;
 
 namespace AlsaSharp.Core.Alsa;
 
@@ -49,12 +50,12 @@ public class Control : IControl
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ALSA ERROR] GetControlElementNames: {ex.Message}");
+            LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] GetControlElementNames: {ex.Message}");
         }
         finally
         {
             try { if (mixer != IntPtr.Zero) InteropAlsa.snd_mixer_close(mixer); }
-            catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] GetControlElementNames (closing mixer): {ex.Message}"); }
+            catch (Exception ex) { LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] GetControlElementNames (closing mixer): {ex.Message}"); }
         }
 
         return results;
@@ -93,12 +94,12 @@ public class Control : IControl
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ALSA ERROR] GetControlElementValue: {ex.Message}");
+            LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] GetControlElementValue: {ex.Message}");
         }
         finally
         {
             try { if (mixer != IntPtr.Zero) InteropAlsa.snd_mixer_close(mixer); }
-            catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] GetControlElementValue (closing mixer): {ex.Message}"); }
+            catch (Exception ex) { LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] GetControlElementValue (closing mixer): {ex.Message}"); }
         }
 
         return 0;
@@ -129,12 +130,12 @@ public class Control : IControl
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ALSA ERROR] SetControlElementValue: {ex.Message}");
+            LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] SetControlElementValue: {ex.Message}");
         }
         finally
         {
             try { if (mixer != IntPtr.Zero) InteropAlsa.snd_mixer_close(mixer); }
-            catch (Exception ex) { Console.Error.WriteLine($"[ALSA ERROR] SetControlElementValue (closing mixer): {ex.Message}"); }
+            catch (Exception ex) { LogManager.GetLogger<Control>()?.Error(ex, $"[ALSA ERROR] SetControlElementValue (closing mixer): {ex.Message}"); }
         }
     }
 

@@ -10,9 +10,9 @@ namespace AlsaSharp.Tests.NUnit
         }
         protected override void Write(NLog.LogEventInfo logEvent)
         {
-            // render the layout and write to stdout so test runners (and NUnit) capture the output
+            // render the layout and write to NUnit's progress output so test runners capture the output
             var text = this.Layout.Render(logEvent);
-            System.Console.WriteLine(text);
+            NUnit.Framework.TestContext.Progress.WriteLine(text);
         }
     }
 }

@@ -220,21 +220,10 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_any(pcm, @params), ExceptionMessages.CanNotFillParameters);
         ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_set_access(pcm, @params, snd_pcm_access_t.SND_PCM_ACCESS_RW_INTERLEAVED), ExceptionMessages.CanNotSetAccessMode);
 
-        var formatResult = (header.BitsPerSample / 8) switch
-        {
-            1 => InteropAlsa.snd_pcm_hw_params_set_format(pcm, @params, snd_pcm_format_t.SND_PCM_FORMAT_U8),
-            2 => InteropAlsa.snd_pcm_hw_params_set_format(pcm, @params, snd_pcm_format_t.SND_PCM_FORMAT_S16_LE),
-            3 => InteropAlsa.snd_pcm_hw_params_set_format(pcm, @params, snd_pcm_format_t.SND_PCM_FORMAT_S24_LE),
-            4 => InteropAlsa.snd_pcm_hw_params_set_format(pcm, @params, snd_pcm_format_t.SND_PCM_FORMAT_S32_LE),
-            _ => throw new AlsaDeviceException(ExceptionMessages.BitsPerSampleError)
-        };
-        ThrowErrorMessage(formatResult, ExceptionMessages.CanNotSetFormat);
-
-        ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_set_channels(pcm, @params, header.NumChannels), ExceptionMessages.CanNotSetChannel);
-
-        var val = header.SampleRate;
-        fixed (int* dirP = &dir)
-            ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_set_rate_near(pcm, @params, &val, dirP), ExceptionMessages.CanNotSetRate);
+        // Do not force format, channels, or sample rate here — let ALSA use the card defaults.
+        // The previous implementation attempted to set format/channels/rate based on the WAV header
+        // which can fail for devices that do not support those exact parameters. Per request,
+        // we avoid setting them and allow ALSA to use its defaults.
 
         // Attempt to set hardware params; if we get a transient I/O error (-EIO)
         // try to recover the PCM and retry once before failing.

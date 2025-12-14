@@ -4,8 +4,10 @@
     {
         public static void Main(string[] args)
         {
-            var sanityTester = new AlsaSanityTester("default");
-            sanityTester.TestSanity();
+                using var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddSimpleConsole());
+                var logger = loggerFactory.CreateLogger<AlsaSanityTester>();
+                var sanityTester = new AlsaSanityTester("default", logger);
+                sanityTester.TestSanity();
         }
     }
 }

@@ -1,5 +1,8 @@
 ﻿using AlsaSharp.Core.Native;
 using System.Runtime.InteropServices;
+using AlsaSharp.Library.Services;
+using AlsaSharp.Library.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AlsaSharp.Library.Builders;
 
@@ -15,6 +18,35 @@ public class UnixSoundDeviceBuilder
     public static IEnumerable<ISoundDevice> Build()
     {
         return GetSoundDevices();
+    }
+    /// <summary>
+    /// Build sound device instances using the ALSA hint service (alsahints).
+    /// </summary>
+    public static IEnumerable<ISoundDevice> Build(IServiceProvider services)
+    {
+        if (services == null) return GetSoundDevices();
+        var hintService = services.GetService<IHintService>();
+        if (hintService == null) return GetSoundDevices();
+
+        var list = new List<ISoundDevice>();
+            foreach (var card in hintService.CardInfos)
+        {
+                var name = card.Id ?? card.Name ?? $"card{card.Index}";
+                var soundDeviceSettings = new SoundDeviceSettings
+                {
+                    RecordingDeviceName = $"hw:CARD={name}",
+                    MixerDeviceName = $"hw:CARD={name}",
+                    PlaybackDeviceName = $"hw:CARD={name}",
+                    CardId = card.Id,
+                    CardName = card.Name,
+                    CardLongName = card.LongName,
+                    CardIndex = card.Index
+                };
+                var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
+                var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
+            list.Add(soundDevice);
+        }
+        return list;
     }
     private static IEnumerable<ISoundDevice> GetSoundDevices()
     {
@@ -43,9 +75,13 @@ public class UnixSoundDeviceBuilder
                 {
                     RecordingDeviceName = $"hw:CARD={name}",
                     MixerDeviceName = $"hw:CARD={name}",
-                    PlaybackDeviceName = $"hw:CARD={name}"
+                    PlaybackDeviceName = $"hw:CARD={name}",
+                    CardName = name,
+                    CardId = name,
+                    CardLongName = name,
+                    CardIndex = cardIndex
                 };
-                var soundDevice = new UnixSoundDevice(soundDeviceSettings);
+                var soundDevice = new UnixSoundDevice(soundDeviceSettings, null);
                 list.Add(soundDevice);
             }
             finally

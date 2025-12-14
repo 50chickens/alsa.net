@@ -7,6 +7,7 @@ using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Logging;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
+using AlsaSharp.Library.Extensions;
 using Microsoft.Extensions.Options;
 using NLog.Extensions.Logging;
 
@@ -36,23 +37,18 @@ internal class Program
         {
             var log = serviceProvider.GetRequiredService<ILog<SignalNoiseRatioOptimizer>>();
             var opts = serviceProvider.GetService<ControlSweepOptions>() ?? new ControlSweepOptions(new List<AlsaControl>());
-            var recorder = serviceProvider.GetRequiredService<IAudioLevelMeterRecorderService>();
-            return new SignalNoiseRatioOptimizer(log, opts, recorder);
+            // Use a noop recorder for the optimizer to avoid requiring a concrete audio meter at startup.
+            var noopRecorder = new NoopAudioLevelMeterRecorder();
+            return new SignalNoiseRatioOptimizer(log, opts, noopRecorder);
         });
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
         builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
-        builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
-        builder.Services.AddSingleton<IAudioInterfaceLevelMeter>(serviceProvider =>
-            new AudioInterfaceLevelMeter(
-                serviceProvider.GetRequiredService<ISoundDevice>(),
-                serviceProvider.GetRequiredService<ILog<AudioInterfaceLevelMeter>>()));
-        builder.Services.AddSingleton(serviceProvider =>
-        {
-            SoundDeviceSettings soundDeviceSettings = new SoundDeviceSettings();
-            return AlsaDeviceBuilder.Build(soundDeviceSettings);
-        });
+
+        // Register ALSA hint service and build ISoundDevice instances for all discovered cards
+        builder.Services.AddHintService(HintServiceBuilder.Build);
+        builder.Services.AddSingleton<IEnumerable<ISoundDevice>>(serviceProvider => UnixSoundDeviceBuilder.Build(serviceProvider));
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
