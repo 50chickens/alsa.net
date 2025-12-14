@@ -93,7 +93,7 @@ public class SNRTools
         var finished = Task.WhenAny(recordTask, Task.Delay(TimeSpan.FromSeconds(seconds + 1))).GetAwaiter().GetResult();
         if (finished != recordTask)
         {
-            try { cts.Cancel(); } catch { /* cancellation best-effort */ }
+            cts.Cancel();
             _log.Info("MeasureNoise: timeout reached, recording canceled");
         }
 
@@ -157,21 +157,12 @@ public class SNRTools
         _ = recordTask.ContinueWith(t => { var ex = t.Exception ?? new Exception("record task faulted"); _log.Error(ex, "MeasureSignalAsync: record task faulted"); }, TaskContinuationOptions.OnlyOnFaulted);
 
         // Play and wait for recording to complete or timeout
-        try
-        {
-            device.Play(new MemoryStream(tone), cts.Token);
-        }
-        catch (Exception ex)
-        {
-            _log.Error(ex, $"MeasureSignalAsync: Play failed: {ex.Message}");
-            try { cts.Cancel(); } catch { }
-            return 0.0;
-        }
+        device.Play(new MemoryStream(tone), cts.Token);
 
         var finished = await Task.WhenAny(recordTask, Task.Delay(TimeSpan.FromSeconds(seconds + 2)));
         if (finished != recordTask)
         {
-            try { cts.Cancel(); } catch { }
+            cts.Cancel();
             _log.Info("MeasureSignalAsync: recording timed out and was canceled");
         }
 

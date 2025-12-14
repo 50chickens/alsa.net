@@ -58,6 +58,8 @@ public class UnixSoundDeviceBuilder
                     CardLongName = card.LongName,
                     CardIndex = card.Index
                 };
+                // Do not probe ALSA here; runtime PCM initialization negotiates formats and updates settings.
+                // Probing at build time was redundant and produced misleading defaults.
                 // If measurement folder provided, compute per-device baseline file path and write header
                 if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
                 {
@@ -74,10 +76,10 @@ public class UnixSoundDeviceBuilder
 
                 var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
                 var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
-                // Log discovered device details here so callers (workers) don't need to duplicate this.
+                // Log discovered device details here; runtime PCM negotiation produces authoritative params.
                 try
                 {
-                    log?.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} rate={soundDeviceSettings.RecordingSampleRate} bits={soundDeviceSettings.RecordingBitsPerSample} chans={soundDeviceSettings.RecordingChannels}");
+                    log?.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} (runtime params negotiated at open)");
                 }
                 catch { }
                 list.Add(soundDevice);

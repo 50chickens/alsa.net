@@ -16,10 +16,8 @@ public class NoopAudioLevelMeterRecorder : IAudioLevelMeterRecorderService
             list.Add(new AudioMeterLevelReading
             {
                 TimestampUtc = DateTime.UtcNow,
-                LeftDbfs = double.NaN,
-                RightDbfs = double.NaN,
-                LeftRms = double.NaN,
-                RightRms = double.NaN
+                ChannelDbfs = new List<double> { double.NaN },
+                ChannelRms = new List<double> { double.NaN }
             });
         }
         return list;
@@ -30,10 +28,8 @@ public class NoopAudioLevelMeterRecorder : IAudioLevelMeterRecorderService
         return new AudioMeterLevelReading
         {
             TimestampUtc = DateTime.UtcNow,
-            LeftDbfs = double.NaN,
-            RightDbfs = double.NaN,
-            LeftRms = double.NaN,
-            RightRms = double.NaN
+            ChannelDbfs = new List<double> { double.NaN },
+            ChannelRms = new List<double> { double.NaN }
         };
     }
 }

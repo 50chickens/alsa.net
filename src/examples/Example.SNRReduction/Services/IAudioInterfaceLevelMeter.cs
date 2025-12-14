@@ -2,5 +2,6 @@ namespace Example.SNRReduction.Services;
 
 public interface IAudioInterfaceLevelMeter
 {
-    (double LeftDbfs, double RightDbfs) MeasureLevels(int captureDurationMs);
+    // Returns a tuple of per-channel dBFS values and per-channel RMS values.
+    (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(int captureDurationMs);
 }

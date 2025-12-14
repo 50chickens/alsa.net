@@ -2,6 +2,8 @@ using AlsaSharp;
 using AlsaSharp.Library;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Services;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Example.SNRReduction.Audio;
 
@@ -11,9 +13,9 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
     private readonly ISoundDevice _device = device;
     private readonly ILog<AudioInterfaceLevelMeter> _log = log;
     private readonly object _recordLock = new object();
-    public (double LeftDbfs, double RightDbfs) MeasureLevels(int captureDurationMs)
+    public (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(int captureDurationMs)
     {
-        var sumSqL = 0L; var sumSqR = 0L; int samples = 0;
+        // accumulate per-channel sums-of-squares
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(captureDurationMs + 1000));
         var acc = new Accumulator(_device);
 
@@ -45,46 +47,49 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
 
         if (acc.Samples == 0)
         {
-            // No data captured — return a sensible floor instead of -Infinity so callers can visualise.
-            return (noiseFloor, noiseFloor);
+            // No data captured — return noise floor per channel
+            int chs = (int)(_device?.Settings?.RecordingChannels ?? (uint)1);
+            var dbfs = Enumerable.Repeat(noiseFloor, chs).ToList();
+            var rms = Enumerable.Repeat(0.0, chs).ToList();
+            return (dbfs, rms);
         }
 
-        // Determine channels from device settings and compute accordingly
         int deviceChannels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
         int bits = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
         double maxAmp = Math.Pow(2.0, bits - 1) - 1.0; // e.g., 32767 for 16-bit
 
-        double rmsL = Math.Sqrt(acc.SumSqL / (double)acc.Samples) / maxAmp;
-        double leftDbfs = rmsL <= 0 ? noiseFloor : 20.0 * Math.Log10(rmsL);
+        // use accumulated sums from Accumulator
+        var sumSq = acc.SumSq ?? new List<long>();
+        while (sumSq.Count < deviceChannels) sumSq.Add(0);
 
-        if (deviceChannels <= 1)
+        var channelRms = new List<double>(deviceChannels);
+        var channelDbfs = new List<double>(deviceChannels);
+        for (int ch = 0; ch < deviceChannels; ch++)
         {
-            _log?.Info("Input device is mono; skipping right-channel measurement.");
-            return (leftDbfs, double.NaN);
+            double rms = Math.Sqrt((double)sumSq[ch] / (double)acc.Samples) / maxAmp;
+            channelRms.Add(rms);
+            channelDbfs.Add(rms <= 0 ? noiseFloor : 20.0 * Math.Log10(rms));
         }
-        double rmsR = Math.Sqrt(acc.SumSqR / (double)acc.Samples) / maxAmp;
-        double rightDbfs = rmsR <= 0 ? noiseFloor : 20.0 * Math.Log10(rmsR);
-        return (leftDbfs, rightDbfs);
+
+        return (channelDbfs, channelRms);
     }
 
-    private class Accumulator
+        private class Accumulator
     {
         private readonly ISoundDevice _device;
-        public long SumSqL;
-        public long SumSqR;
-        public int Samples;
-        private bool _headerSeen;
+            public List<long> SumSq = new List<long>();
+            public int Samples;
+            private bool _headerSeen;
 
-        public Accumulator(ISoundDevice device)
-        {
-            _device = device;
-            SumSqL = 0;
-            SumSqR = 0;
-            Samples = 0;
-            _headerSeen = false;
-        }
+            public Accumulator(ISoundDevice device)
+            {
+                _device = device;
+                SumSq = new List<long>();
+                Samples = 0;
+                _headerSeen = false;
+            }
 
-        public void OnData(byte[] buffer)
+            public void OnData(byte[] buffer)
         {
             if (!_headerSeen) { _headerSeen = true; return; }
 
@@ -96,26 +101,37 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
 
             int frameCount = buffer.Length / (bytesPerSample * channels);
             if (frameCount <= 0) return;
+            // ensure SumSq list capacity
+            while (SumSq.Count < channels) SumSq.Add(0);
             for (int i = 0; i < frameCount; i++)
-            {
-                int offset = i * channels * bytesPerSample;
-                // ensure we have enough bytes for at least one sample
-                if (offset + bytesPerSample - 1 >= buffer.Length) break;
-
-                // read left channel (currently only 16-bit signed samples are supported)
-                short sL = BitConverter.ToInt16(buffer, offset);
-                SumSqL += (long)sL * sL;
-
-                if (channels >= 2)
                 {
-                    // ensure right sample bytes exist
-                    if (offset + bytesPerSample * 2 - 1 >= buffer.Length) break;
-                    short sR = BitConverter.ToInt16(buffer, offset + bytesPerSample);
-                    SumSqR += (long)sR * sR;
-                }
+                    int offset = i * channels * bytesPerSample;
+                    if (offset + bytesPerSample - 1 >= buffer.Length) break;
 
+                // read all channels generically
+                for (int ch = 0; ch < channels; ch++)
+                {
+                    int so = offset + ch * bytesPerSample;
+                    if (so + bytesPerSample - 1 >= buffer.Length) break;
+                    long sample = 0;
+                    if (bytesPerSample == 3)
+                    {
+                        int v = buffer[so] | (buffer[so + 1] << 8) | (buffer[so + 2] << 16);
+                        if ((v & 0x800000) != 0) v |= unchecked((int)0xFF000000);
+                        sample = v;
+                    }
+                    else if (bytesPerSample == 4)
+                    {
+                        sample = BitConverter.ToInt32(buffer, so);
+                    }
+                    else
+                    {
+                        sample = BitConverter.ToInt16(buffer, so);
+                    }
+                    SumSq[ch] += sample * sample;
+                }
                 Samples++;
-            }
+                }
         }
     }
 }

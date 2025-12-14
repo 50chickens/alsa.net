@@ -30,14 +30,12 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
     }
     public AudioMeterLevelReading GetAudioMeterLevelReading(TimeSpan measurementDuration)
     {
-        var (leftDbfs, rightDbfs) = _audioInterfaceLevelMeter.MeasureLevels((int)measurementDuration.TotalMilliseconds);
+        var (channelDbfs, channelRms) = _audioInterfaceLevelMeter.MeasureLevels((int)measurementDuration.TotalMilliseconds);
         AudioMeterLevelReading audioLevelReading = new()
         {
             TimestampUtc = DateTime.UtcNow,
-            LeftDbfs = leftDbfs,
-            RightDbfs = rightDbfs,
-            LeftRms = leftDbfs.ToRms(),
-            RightRms = rightDbfs.ToRms()
+            ChannelDbfs = channelDbfs ?? new List<double>(),
+            ChannelRms = channelRms ?? new List<double>()
         };
 
         return audioLevelReading;

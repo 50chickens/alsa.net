@@ -56,6 +56,15 @@ internal class Program
         builder.Logging.ClearProviders();
 
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
+        // Suppress informational lifecycle messages from the host which can appear
+        // during graceful shutdown and cause confusing interleaved output.
+        builder.Logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.Extensions.Hosting.Lifetime", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.Extensions.Hosting.Host", LogLevel.Warning);
+        // Some logging adapters emit short category names like "Lifetime"/"Host";
+        // add a generic filter for those names as well to be defensive.
+        builder.Logging.AddFilter("Lifetime", LogLevel.Warning);
+        builder.Logging.AddFilter("Host", LogLevel.Warning);
 
         builder.Services.AddAudioService(options =>
         {

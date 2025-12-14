@@ -243,6 +243,63 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                 ThrowErrorMessage(hwRv, ExceptionMessages.CanNotSetHwParams);
             }
         }
+
+            // Read back negotiated hw params (format, rate, channels) so callers can
+            // correctly interpret captured sample bytes. Do this after snd_pcm_hw_params
+            // so we get the actual values ALSA selected.
+            try
+            {
+                Core.Native.snd_pcm_format_t fmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN;
+                uint rate = 0;
+                int rdir = 0;
+                uint channels = 0;
+                // Attempt to read format/rate/channels; failures should not be fatal
+                _ = InteropAlsa.snd_pcm_hw_params_get_format(@params, &fmt);
+                _ = InteropAlsa.snd_pcm_hw_params_get_rate(@params, &rate, &rdir);
+                _ = InteropAlsa.snd_pcm_hw_params_get_channels(@params, &channels);
+
+                // Map ALSA format to bits per sample when possible
+                ushort bits = Settings.RecordingBitsPerSample;
+                switch (fmt)
+                {
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_BE:
+                        bits = 16; break;
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_BE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3BE:
+                        bits = 24; break;
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_BE:
+                        bits = 32; break;
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE:
+                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_BE:
+                        // leave bits as-is but callers may need to support float
+                        break;
+                    default:
+                        break;
+                }
+
+                if (rate != 0) Settings.RecordingSampleRate = rate;
+                if (channels != 0) Settings.RecordingChannels = (ushort)channels;
+                Settings.RecordingBitsPerSample = bits;
+                // If this initialization is for the recording PCM, log the negotiated
+                // audio capture parameters so callers can see the actual runtime values.
+                try
+                {
+                    if (pcm == _recordingPcm)
+                    {
+                        _log?.LogInformation("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
+                            Settings.RecordingDeviceName, Settings.RecordingSampleRate, Settings.RecordingBitsPerSample, Settings.RecordingChannels);
+                    }
+                }
+                catch { /* best-effort logging only */ }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogDebug(ex, "[ALSA DEBUG] Could not read negotiated hw params");
+            }
     }
 
     void SetPlaybackVolume(nint volume)

@@ -53,8 +53,12 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
             double sum = 0; int n = 0;
             foreach (var it in r)
             {
-                if (!double.IsNaN(it.LeftDbfs)) { sum += it.LeftDbfs; n++; }
-                if (!double.IsNaN(it.RightDbfs)) { sum += it.RightDbfs; n++; }
+                if (it?.ChannelDbfs == null) continue;
+                for (int i = 0; i < it.ChannelDbfs.Count; i++)
+                {
+                    var v = it.ChannelDbfs[i];
+                    if (!double.IsNaN(v)) { sum += v; n++; }
+                }
             }
             return n == 0 ? double.NaN : sum / n;
         }
@@ -184,7 +188,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                     Thread.Sleep(150);
 
                     // measure noise (no tone)
-                    List<AudioMeterLevelReading> noiseReadings = [];
+                    List<AudioMeterLevelReading> noiseReadings = new List<AudioMeterLevelReading>();
                     var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control}={val}"));
                     try { noiseReadings = noiseTask.Result; } catch { noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
 

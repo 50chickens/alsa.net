@@ -75,6 +75,9 @@ internal static class InteropAlsa
     public static extern int snd_pcm_hw_params_set_format(IntPtr pcm, IntPtr @params, snd_pcm_format_t val);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_hw_params_test_format(IntPtr pcm, IntPtr @params, snd_pcm_format_t format);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_hw_params_set_channels(IntPtr pcm, IntPtr @params, uint val);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
@@ -82,6 +85,9 @@ internal static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_pcm_hw_params(IntPtr pcm, IntPtr @params);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_hw_params_current(IntPtr pcm, IntPtr @params);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_pcm_hw_params_get_period_size(IntPtr @params, nuint* frames, int* dir);
@@ -100,6 +106,52 @@ internal static class InteropAlsa
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern unsafe int snd_pcm_hw_params_set_period_size_near(IntPtr pcm, IntPtr @params, nuint* frames, int* dir);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_get_buffer_size(IntPtr @params, nuint* val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_set_buffer_size_near(IntPtr pcm, IntPtr @params, nuint* val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_get_buffer_time_max(IntPtr @params, uint* val, int* dir);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_set_period_time_near(IntPtr pcm, IntPtr @params, uint* val, int* dir);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern unsafe int snd_pcm_hw_params_set_buffer_time_near(IntPtr pcm, IntPtr @params, uint* val, int* dir);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_hw_params_set_subformat(IntPtr pcm, IntPtr @params, int subformat);
+
+    // Standard subformat value used by aplay/arecord
+    public const int SND_PCM_SUBFORMAT_STD = 0;
+
+    // Software parameters (sw_params) helpers
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params_malloc(ref IntPtr swparams);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params_current(IntPtr pcm, IntPtr swparams);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params_set_start_threshold(IntPtr pcm, IntPtr swparams, nuint val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params_set_stop_threshold(IntPtr pcm, IntPtr swparams, nuint val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params_set_avail_min(IntPtr pcm, IntPtr swparams, nuint val);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_sw_params(IntPtr pcm, IntPtr swparams);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern void snd_pcm_sw_params_free(IntPtr swparams);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_pcm_prepare(IntPtr pcm);
 
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_open(out IntPtr mixer, int mode);

@@ -390,7 +390,7 @@ namespace AlsaSharp.Library.Services
         {
             return ifaceStr.ToLowerInvariant() switch
             {
-                "hw" or "plughw" or "dmix" or "dsnoop" => InterfaceIdentificationType.SND_CTL_ELEM_IFACE_PCM,
+                "hw" or "dmix" or "dsnoop" => InterfaceIdentificationType.SND_CTL_ELEM_IFACE_PCM,
                 "ctl" => InterfaceIdentificationType.SND_CTL_ELEM_IFACE_CARD,
                 _ => InterfaceIdentificationType.SND_CTL_ELEM_IFACE_LAST,
             };
