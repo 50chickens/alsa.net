@@ -185,8 +185,10 @@ internal static class InteropAlsa
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_get_enum_items(IntPtr elem);
 
+    // Note: the libc/ALSA header declares this as int snd_mixer_selem_get_enum_item_name(elem, idx, maxlen, char *str)
+    // which fills a caller-provided buffer. Do not marshal as returning a pointer (that caused stack corruption).
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
-    public static extern IntPtr snd_mixer_selem_get_enum_item_name(IntPtr elem, int id);
+    public static extern int snd_mixer_selem_get_enum_item_name(IntPtr elem, uint idx, UIntPtr maxlen, System.Text.StringBuilder str);
     
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_get_enum_item(IntPtr elem, snd_mixer_selem_channel_id channel, out uint item);

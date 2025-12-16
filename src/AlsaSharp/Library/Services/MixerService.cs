@@ -97,10 +97,11 @@ namespace AlsaSharp.Library.Services
             {
                 try
                 {
-                    var itemPtr = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, ei);
-                    if (itemPtr != IntPtr.Zero)
+                    var sb = new System.Text.StringBuilder(256);
+                    int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)ei, (UIntPtr)sb.Capacity, sb);
+                    if (rc >= 0)
                     {
-                        var itemName = Marshal.PtrToStringUTF8(itemPtr) ?? string.Empty;
+                        var itemName = sb.ToString() ?? string.Empty;
                         var candidate = itemLabel?.Trim().Trim('\'') ?? string.Empty;
                         if (string.Equals(itemName.Trim('\''), candidate, StringComparison.OrdinalIgnoreCase) || string.Equals(itemName, candidate, StringComparison.OrdinalIgnoreCase))
                         {
@@ -137,9 +138,10 @@ namespace AlsaSharp.Library.Services
             {
                 try
                 {
-                    var itemPtr = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, ei);
-                    if (itemPtr == IntPtr.Zero) continue;
-                    var itemName = Marshal.PtrToStringUTF8(itemPtr) ?? string.Empty;
+                    var sb = new System.Text.StringBuilder(256);
+                    int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)ei, (UIntPtr)sb.Capacity, sb);
+                    if (rc < 0) continue;
+                    var itemName = sb.ToString() ?? string.Empty;
                     var candidate = itemLabel?.Trim().Trim('\'') ?? string.Empty;
                     if (string.Equals(itemName.Trim('\''), candidate, StringComparison.OrdinalIgnoreCase) || string.Equals(itemName, candidate, StringComparison.OrdinalIgnoreCase))
                     {
@@ -214,8 +216,9 @@ namespace AlsaSharp.Library.Services
                     {
                         if (InteropAlsa.snd_mixer_selem_get_enum_item(elem, ch, out uint idx) >= 0)
                         {
-                            var ptr = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (int)idx);
-                            var lbl = ptr != IntPtr.Zero ? Marshal.PtrToStringUTF8(ptr) ?? string.Empty : idx.ToString();
+                            var sb = new System.Text.StringBuilder(256);
+                            int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)idx, (UIntPtr)sb.Capacity, sb);
+                            var lbl = rc >= 0 ? sb.ToString() ?? string.Empty : idx.ToString();
                             type = "enum";
                             value = lbl.Trim('\'');
                             return true;
