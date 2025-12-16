@@ -182,6 +182,15 @@ internal static class InteropAlsa
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern IntPtr snd_mixer_selem_get_name(IntPtr elem);
 
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_mixer_selem_get_enum_items(IntPtr elem);
+
+    [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
+    public static extern IntPtr snd_mixer_selem_get_enum_item_name(IntPtr elem, int id);
+    
+    [DllImport(AlsaLibrary, CallingConvention = CConvention)]
+    public static extern int snd_mixer_selem_get_enum_item(IntPtr elem, snd_mixer_selem_channel_id channel, out uint item);
+
     // Free memory allocated by ALSA helper functions that return allocated strings
     [DllImport("libc", CallingConvention = CConvention)]
     public static extern void free(IntPtr ptr);

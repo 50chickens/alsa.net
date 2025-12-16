@@ -700,7 +700,37 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                     }
 
                     // could not parse (enum or string) - skip
-                    _log?.LogInformation("[ALSA INFO] RestoreState: skipping unsupported value for control '{Name}': {Raw}", currentName, rawVal);
+                    // try to map enumerated item name to its numeric index using MixerService
+                    try
+                    {
+                        var enumCandidate = rawVal.Trim().Trim('\'');
+                        var mixerSvc = new AlsaSharp.Library.Services.MixerService();
+                        int cardIndex = Settings?.CardIndex ?? 0;
+                        if (mixerSvc.TryGetEnumItemIndex(cardIndex, currentName, enumCandidate, out int enumIndex))
+                        {
+                            if (key.Contains('.'))
+                            {
+                                var idxPart = key.Split('.').Last();
+                                if (int.TryParse(idxPart, out int idx) && idx >= 0)
+                                {
+                                    var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
+                                    try { SetSimpleElementValue(currentName, ch, enumIndex); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name}:{Channel} -> {Value}", currentName, ch, enumIndex); }
+                                }
+                            }
+                            else
+                            {
+                                try { SetSimpleElementValue(currentName, string.Empty, enumIndex); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name} -> {Value}", currentName, enumIndex); }
+                            }
+                        }
+                        else
+                        {
+                            _log?.LogInformation("[ALSA INFO] RestoreState: skipping unsupported value for control '{Name}': {Raw}", currentName, rawVal);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.LogInformation("[ALSA INFO] RestoreState: skipping unsupported value for control '{Name}': {Raw} ({Err})", currentName, rawVal, ex.Message);
+                    }
                 }
             }
 

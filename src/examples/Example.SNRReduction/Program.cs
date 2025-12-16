@@ -23,7 +23,9 @@ internal class Program
         var switchMappings = new Dictionary<string, string>
         {
             { "--AutoSweep", "SNRReduction:AutoSweep" },
+                { "--AutoConfigureDaiMux", "SNRReduction:AutoConfigureDaiMux" },
             { "--AudioCardName", "SNRReduction:AudioCardName" },
+            { "--ApplyAlsaStateFile", "SNRReduction:ApplyAlsaStateFile" },
 
         };
 
@@ -50,6 +52,7 @@ internal class Program
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         var measurementFolder = snrSection.GetValue<string>("MeasurementFolder") ?? "~/.SNRReduction";
         builder.Services.AddUnixSoundDeviceBuilder(measurementFolder);
+        builder.Services.AddSingleton<Example.SNRReduction.Services.AudioCardConfigService>();
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);

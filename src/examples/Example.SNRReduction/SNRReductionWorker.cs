@@ -61,26 +61,95 @@ public class SNRReductionWorker : BackgroundService
         measurementFolder = measurementFolder.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         Directory.CreateDirectory(measurementFolder);
 
-        // Restore ALSA card state per-device if configured
-        if (_snrReductionServiceOptions.RestoreAlsaStateBeforeMeasurement)
+        // Apply ALSA state file per-device if configured (use library restore, not alsactl)
+        if (!string.IsNullOrWhiteSpace(_snrReductionServiceOptions.ApplyAlsaStateFile))
         {
-            _log.Info("Restoring ALSA state before measurement as configured for all discovered cards.");
-            string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            string defaultStateFileName = System.IO.Path.Combine(folderPath, _snrReductionServiceOptions.DefaultAudioStateFileName);
-            foreach (var dev in _soundDevices)
+            _log.Info("Applying ALSA state file before measurement as configured for all discovered cards.");
+
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName?.Replace("~", home) ?? home;
+
+            // If the configured value looks like a full path (rooted or contains a separator), use it
+            // otherwise combine with the default folder.
+            string requested = _snrReductionServiceOptions.ApplyAlsaStateFile;
+            string stateFilePath;
+            try
             {
-                try
+                if (Path.IsPathRooted(requested) || requested.Contains(Path.DirectorySeparatorChar) || requested.Contains('/'))
                 {
-                    _log.Info($"Restoring ALSA state for device {dev?.Settings?.RecordingDeviceName} from: {defaultStateFileName}");
-                    dev.RestoreStateFromAlsaStateFile(defaultStateFileName);
+                    stateFilePath = requested.Replace("~", home);
                 }
-                catch (Exception ex)
+                else
                 {
-                    _log.Warn($"Failed to restore ALSA state for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
+                    stateFilePath = Path.Combine(folderPath, requested);
                 }
+
+                foreach (var dev in _soundDevices)
+                {
+                    try
+                    {
+                        _log.Info($"Applying ALSA state for device {dev?.Settings?.RecordingDeviceName} from: {stateFilePath}");
+                        dev.RestoreStateFromAlsaStateFile(stateFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warn($"Failed to apply ALSA state for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Failed to resolve/apply ALSA state file '{_snrReductionServiceOptions.ApplyAlsaStateFile}': {ex.Message}");
             }
         }
         
+        // Try to configure audio cards to a sane starting state (example: DAI Left Source MUX)
+        if (_snrReductionServiceOptions.AutoConfigureDaiMux)
+        {
+            try
+            {
+                var cfg = _services.GetService<Example.SNRReduction.Services.AudioCardConfigService>();
+                if (cfg != null)
+                {
+                    foreach (var dev in _soundDevices)
+                    {
+                        try
+                        {
+                            var cardIndex = dev?.Settings?.CardIndex ?? 0;
+                            var chosen = cfg.TryPreferredDaiMux(cardIndex);
+                            _log.Info($"DAI Left Source MUX for card {cardIndex} set to: {chosen ?? "(none)"}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Warn($"Failed to configure DAI MUX for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"AudioCardConfigService error: {ex.Message}");
+            }
+        }
+
+        // Check DAI MUX routing and warn if left/right selections differ (may cause imbalance)
+        try
+        {
+            var left = AlsaSharp.MixerManager.GetElementValue( (int?)null ?? 0, "DAI Left Source MUX");
+            var right = AlsaSharp.MixerManager.GetElementValue( (int?)null ?? 0, "DAI Right Source MUX");
+            if (left.Success && right.Success && left.Type == "enum" && right.Type == "enum")
+            {
+                if (!string.Equals(left.Value, right.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    _log.Warn($"Detected DAI mux mismatch: Left='{left.Value}' Right='{right.Value}'. This may cause L/R imbalance.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Trace($"DAI MUX check failed: {ex.Message}");
+        }
+
         _log.Info($"Starting measurement: duration={_measureDuration.TotalSeconds}s count={_measurementCount} for {_soundDevices.Count()} devices");
 
         // Baseline summary and per-device headers are created by the UnixSoundDeviceBuilder at registration time

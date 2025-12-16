@@ -3,7 +3,7 @@ using System.Text;
 
 namespace AlsaSharp.Library;
 
-struct WavHeader
+public struct WavHeader
 {
     public char[] ChunkId { get; set; }
 
