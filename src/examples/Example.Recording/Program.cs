@@ -1,4 +1,4 @@
-﻿using AlsaSharp;
+using AlsaSharp;
 using AlsaSharp.Library.Builders;
 
 namespace Example.Recording;

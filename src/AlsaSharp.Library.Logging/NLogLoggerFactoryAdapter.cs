@@ -1,6 +1,6 @@
-﻿using Common.Logging;
-using Common.Logging.Factory;
 using System.Collections.Specialized;
+using Common.Logging;
+using Common.Logging.Factory;
 
 namespace AlsaSharp.Library.Logging
 {

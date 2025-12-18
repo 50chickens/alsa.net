@@ -1,11 +1,11 @@
-using NUnit.Framework;
+using System.Linq;
+using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Library.Services;
 using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
-using System.Linq;
-using AlsaSharp.Library.Builders;
-using AlsaSharp.Library.Services;
+using NUnit.Framework;
 
 namespace AlsaSharp.Tests
 {

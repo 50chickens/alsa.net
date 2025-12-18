@@ -1,13 +1,13 @@
-using System.Text.Json;
 using System.IO;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+using AlsaSharp;
 using AlsaSharp.Library.Logging;
+using Example.SNRReduction.Audio;
+using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
-using Example.SNRReduction.Interfaces;
-using Example.SNRReduction.Audio;
-using AlsaSharp;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Example.SNRReduction;
@@ -18,7 +18,7 @@ namespace Example.SNRReduction;
 public class SNRReductionWorker : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log;
-    
+
     private readonly AudioLevelMeterRecorderServiceOptions _recorderOptions;
     private readonly SNRReductionServiceOptions _snrReductionServiceOptions;
     private readonly IControlSweepService _sweepService;
@@ -28,7 +28,7 @@ public class SNRReductionWorker : BackgroundService
     private readonly ISNRWorkerHelper _helper;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly string _timestamp;
-    
+
     private TimeSpan _measureDuration;
     private int _measurementCount;
 
@@ -52,9 +52,9 @@ public class SNRReductionWorker : BackgroundService
         _alsabatService = alsabatService ?? throw new ArgumentNullException(nameof(alsabatService));
         _helper = helper ?? throw new ArgumentNullException(nameof(helper));
         _timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        
+
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.Trace("SNRReductionWorker starting baseline measurement...");
@@ -91,9 +91,11 @@ public class SNRReductionWorker : BackgroundService
 
         foreach (var device in _soundDevices)
         {
-            if (device == null) continue;
+            if (device == null)
+                continue;
             var settings = device.Settings;
-            if (settings == null) continue;
+            if (settings == null)
+                continue;
 
             // Prefer baseline file path created by the builder; fallback to worker naming if absent
             var jsonPath = settings.BaselineFilePath;
@@ -116,7 +118,7 @@ public class SNRReductionWorker : BackgroundService
                 _log.Error(ex, "Failed to run baseline");
             }
         }
-        
+
         // If AutoSweep is enabled, run a short quick sweep to verify end-to-end behavior.
         // if (_snrReductionServiceOptions.AutoSweep)
         // {
@@ -175,9 +177,11 @@ public class SNRReductionWorker : BackgroundService
                 {
                     try
                     {
-                        if (device == null) continue;
+                        if (device == null)
+                            continue;
                         var settings = device.Settings;
-                        if (settings == null) continue;
+                        if (settings == null)
+                            continue;
                         _log.Info($"Starting continuous SNR monitoring on device {settings.RecordingDeviceName} (15 samples, 1s each)");
                         int samples = 15;
                         await monitor.RunContinuousMonitoringAsync(device, _measureDuration, samples, measurementFolder, stoppingToken);
@@ -204,9 +208,11 @@ public class SNRReductionWorker : BackgroundService
             {
                 try
                 {
-                    if (device == null) continue;
+                    if (device == null)
+                        continue;
                     var settings = device.Settings;
-                    if (settings == null) continue;
+                    if (settings == null)
+                        continue;
                     _log.Info($"Running loopback tone test on card {settings.CardId ?? settings.CardName ?? "unknown"}");
                     await tester.RunLoopbackTestAsync(device, stoppingToken);
                 }
@@ -242,7 +248,8 @@ public class SNRReductionWorker : BackgroundService
 
             foreach (var dev in _soundDevices)
             {
-                if (dev == null) continue;
+                if (dev == null)
+                    continue;
                 try
                 {
                     var dsettings = dev.Settings;

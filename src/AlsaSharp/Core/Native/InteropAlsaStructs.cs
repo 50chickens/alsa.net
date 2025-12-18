@@ -1,4 +1,4 @@
-﻿namespace AlsaSharp.Core.Native;
+namespace AlsaSharp.Core.Native;
 
 internal enum snd_pcm_stream_t
 {

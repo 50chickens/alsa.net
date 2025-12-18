@@ -1,6 +1,6 @@
+using System.Runtime.InteropServices;
 using AlsaSharp.Core.Alsa;
 using AlsaSharp.Core.Native;
-using System.Runtime.InteropServices;
 
 namespace AlsaSharp.Library.Services
 {
@@ -24,12 +24,16 @@ namespace AlsaSharp.Library.Services
         public bool TrySetPlaybackVolume(int card, string controlName, string channelName, nint value)
         {
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
-            if (InteropAlsa.snd_mixer_selem_has_playback_volume(elem) == 0) return false;
-            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel)) return false;
+            if (elem == IntPtr.Zero)
+                return false;
+            if (InteropAlsa.snd_mixer_selem_has_playback_volume(elem) == 0)
+                return false;
+            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel))
+                return false;
 
             int rc = InteropAlsa.snd_mixer_selem_set_playback_volume(elem, channel, value);
             return rc >= 0;
@@ -40,12 +44,16 @@ namespace AlsaSharp.Library.Services
         public bool TrySetCaptureVolume(int card, string controlName, string channelName, nint value)
         {
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
-            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel)) return false;
-            if (InteropAlsa.snd_mixer_selem_has_capture_channel(elem, channel) == 0) return false;
+            if (elem == IntPtr.Zero)
+                return false;
+            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel))
+                return false;
+            if (InteropAlsa.snd_mixer_selem_has_capture_channel(elem, channel) == 0)
+                return false;
 
             int rc = InteropAlsa.snd_mixer_selem_set_capture_volume(elem, channel, value);
             return rc >= 0;
@@ -56,11 +64,14 @@ namespace AlsaSharp.Library.Services
         public bool TrySetPlaybackSwitch(int card, string controlName, string channelName, int state)
         {
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
-            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel)) return false;
+            if (elem == IntPtr.Zero)
+                return false;
+            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel))
+                return false;
 
             int rc = InteropAlsa.snd_mixer_selem_set_playback_switch(elem, channel, state);
             return rc >= 0;
@@ -71,11 +82,14 @@ namespace AlsaSharp.Library.Services
         public bool TrySetCaptureSwitch(int card, string controlName, string channelName, int state)
         {
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
-            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel)) return false;
+            if (elem == IntPtr.Zero)
+                return false;
+            if (!Enum.TryParse<snd_mixer_selem_channel_id>(channelName, out var channel))
+                return false;
 
             int rc = InteropAlsa.snd_mixer_selem_set_capture_switch(elem, channel, state);
             return rc >= 0;
@@ -89,13 +103,16 @@ namespace AlsaSharp.Library.Services
         {
             index = -1;
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
+            if (elem == IntPtr.Zero)
+                return false;
 
             int enumCount = InteropAlsa.snd_mixer_selem_get_enum_items(elem);
-            if (enumCount <= 0) return false;
+            if (enumCount <= 0)
+                return false;
 
             for (int ei = 0; ei < enumCount; ei++)
             {
@@ -129,13 +146,16 @@ namespace AlsaSharp.Library.Services
         {
             bool anySet = false;
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
+            if (elem == IntPtr.Zero)
+                return false;
 
             int enumCount = InteropAlsa.snd_mixer_selem_get_enum_items(elem);
-            if (enumCount <= 0) return false;
+            if (enumCount <= 0)
+                return false;
 
             int foundIndex = -1;
             for (int ei = 0; ei < enumCount; ei++)
@@ -144,7 +164,8 @@ namespace AlsaSharp.Library.Services
                 {
                     var sb = new System.Text.StringBuilder(256);
                     int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)ei, (UIntPtr)sb.Capacity, sb);
-                    if (rc < 0) continue;
+                    if (rc < 0)
+                        continue;
                     var itemName = sb.ToString() ?? string.Empty;
                     var candidate = itemLabel?.Trim().Trim('\'') ?? string.Empty;
                     if (string.Equals(itemName.Trim('\''), candidate, StringComparison.OrdinalIgnoreCase) || string.Equals(itemName, candidate, StringComparison.OrdinalIgnoreCase))
@@ -156,7 +177,8 @@ namespace AlsaSharp.Library.Services
                 catch { }
             }
 
-            if (foundIndex < 0) return false;
+            if (foundIndex < 0)
+                return false;
 
             // If a specific channel was requested, try parse and set only that channel.
             if (!string.IsNullOrWhiteSpace(channelName))
@@ -182,9 +204,11 @@ namespace AlsaSharp.Library.Services
                 {
                     bool hasPlayback = InteropAlsa.snd_mixer_selem_has_playback_channel(elem, channel) != 0;
                     bool hasCapture = InteropAlsa.snd_mixer_selem_has_capture_channel(elem, channel) != 0;
-                    if (!hasPlayback && !hasCapture) continue;
+                    if (!hasPlayback && !hasCapture)
+                        continue;
                     int rc = AlsaSharp.Library.Alsa.NativeMethods.snd_mixer_selem_set_enum_item(elem, channel, (uint)foundIndex);
-                    if (rc >= 0) anySet = true;
+                    if (rc >= 0)
+                        anySet = true;
                 }
                 catch { }
             }
@@ -204,10 +228,12 @@ namespace AlsaSharp.Library.Services
             value = string.Empty;
 
             using var handle = new MixerHandle(card);
-            if (!handle.IsOpen) return false;
+            if (!handle.IsOpen)
+                return false;
 
             var elem = handle.FindElementByName(controlName);
-            if (elem == IntPtr.Zero) return false;
+            if (elem == IntPtr.Zero)
+                return false;
 
             try
             {

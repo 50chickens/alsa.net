@@ -1,5 +1,5 @@
-using AlsaSharp.Core.Native;
 using System;
+using AlsaSharp.Core.Native;
 
 namespace AlsaSharp.Core.Alsa
 {
@@ -21,13 +21,17 @@ namespace AlsaSharp.Core.Alsa
         /// <param name="card">ALSA card index.</param>
         public MixerHandle(int card)
         {
-            if (InteropAlsa.snd_mixer_open(out var h, 0) < 0) { Handle = IntPtr.Zero; return; }
+            if (InteropAlsa.snd_mixer_open(out var h, 0) < 0)
+            { Handle = IntPtr.Zero; return; }
             Handle = h;
 
             var attachName = $"hw:{card}";
-            if (InteropAlsa.snd_mixer_attach(Handle, attachName) < 0) { Close(); return; }
-            if (InteropAlsa.snd_mixer_selem_register(Handle, IntPtr.Zero, IntPtr.Zero) < 0) { Close(); return; }
-            if (InteropAlsa.snd_mixer_load(Handle) < 0) { Close(); return; }
+            if (InteropAlsa.snd_mixer_attach(Handle, attachName) < 0)
+            { Close(); return; }
+            if (InteropAlsa.snd_mixer_selem_register(Handle, IntPtr.Zero, IntPtr.Zero) < 0)
+            { Close(); return; }
+            if (InteropAlsa.snd_mixer_load(Handle) < 0)
+            { Close(); return; }
         }
 
         /// <summary>Returns the first mixer element pointer or <see cref="IntPtr.Zero"/>.</summary>
@@ -41,15 +45,19 @@ namespace AlsaSharp.Core.Alsa
         /// <returns>Pointer to the element or <see cref="IntPtr.Zero"/>.</returns>
         public IntPtr FindElementByName(string name)
         {
-            if (!IsOpen) return IntPtr.Zero;
+            if (!IsOpen)
+                return IntPtr.Zero;
             var elem = FirstElem();
             while (elem != IntPtr.Zero)
             {
                 var ptr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                if (ptr == IntPtr.Zero) { elem = NextElem(elem); continue; }
+                if (ptr == IntPtr.Zero)
+                { elem = NextElem(elem); continue; }
                 var nm = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr);
-                if (nm == null) { elem = NextElem(elem); continue; }
-                if (string.Equals(nm, name, StringComparison.Ordinal)) return elem;
+                if (nm == null)
+                { elem = NextElem(elem); continue; }
+                if (string.Equals(nm, name, StringComparison.Ordinal))
+                    return elem;
                 elem = NextElem(elem);
             }
             return IntPtr.Zero;

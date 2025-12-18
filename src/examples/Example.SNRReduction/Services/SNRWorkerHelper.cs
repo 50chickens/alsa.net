@@ -76,11 +76,13 @@ public class SNRWorkerHelper : ISNRWorkerHelper
             totalBytes = (int)Math.Max(0, Math.Min(remaining, int.MaxValue));
         }
 
-        if (totalBytes == 0) return Array.Empty<float>();
+        if (totalBytes == 0)
+            return Array.Empty<float>();
 
         byte[] data = new byte[totalBytes];
         int read = wavStream.Read(data, 0, totalBytes);
-        if (read != totalBytes) Array.Resize(ref data, Math.Max(0, read));
+        if (read != totalBytes)
+            Array.Resize(ref data, Math.Max(0, read));
 
         int frames = data.Length / (bytesPerSample * channels);
         var mono = new float[frames];
@@ -94,15 +96,19 @@ public class SNRWorkerHelper : ISNRWorkerHelper
             {
                 int offset = f * channels * bytesPerSample + ch * bytesPerSample;
                 double sample = 0.0;
-                if (bytesPerSample == 2) sample = BitConverter.ToInt16(data, offset);
+                if (bytesPerSample == 2)
+                    sample = BitConverter.ToInt16(data, offset);
                 else if (bytesPerSample == 3)
                 {
                     int v = data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16);
-                    if ((v & 0x800000) != 0) v |= unchecked((int)0xFF000000);
+                    if ((v & 0x800000) != 0)
+                        v |= unchecked((int)0xFF000000);
                     sample = v;
                 }
-                else if (bytesPerSample == 4) sample = BitConverter.ToInt32(data, offset);
-                else sample = data[offset];
+                else if (bytesPerSample == 4)
+                    sample = BitConverter.ToInt32(data, offset);
+                else
+                    sample = data[offset];
                 acc += sample / maxAmp;
             }
             mono[f] = (float)(acc / channels);
@@ -113,8 +119,10 @@ public class SNRWorkerHelper : ISNRWorkerHelper
 
     public string SanitizeFileName(string s)
     {
-        if (string.IsNullOrWhiteSpace(s)) return "unknown";
-        foreach (var c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+        if (string.IsNullOrWhiteSpace(s))
+            return "unknown";
+        foreach (var c in Path.GetInvalidFileNameChars())
+            s = s.Replace(c, '_');
         return s.Replace(' ', '_');
     }
 

@@ -11,10 +11,10 @@ public class ControlSweepOption
 
 public class ControlSweepOptions(List<AlsaControl> controls)
 {
-    
+
     public const string Settings = "ControlSweep";
     private readonly List<AlsaControl> _controls = controls;
-    public IEnumerable<ControlSweepOption> ControlSweeps 
+    public IEnumerable<ControlSweepOption> ControlSweeps
     {
         get
         {

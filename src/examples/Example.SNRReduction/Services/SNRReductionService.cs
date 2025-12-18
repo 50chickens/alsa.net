@@ -1,7 +1,7 @@
-﻿using Example.SNRReduction.Interfaces;
-using Example.SNRReduction.Models;
-using AlsaSharp.Library.Logging;
 using AlsaSharp;
+using AlsaSharp.Library.Logging;
+using Example.SNRReduction.Interfaces;
+using Example.SNRReduction.Models;
 
 namespace Example.SNRReduction.Services;
 
@@ -12,7 +12,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
 
     // small no-op logger implementation used when creating helper tools
-    
+
     public List<ControlLevel> FindBestLevelsForControls(ControlSweepOptions options)
     {
         return new List<ControlLevel>()
@@ -25,8 +25,10 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
     public List<SNRSweepResult> SweepControl(ISoundDevice soundDevice, string mixerElementName, int controlMin, int controlMax, int controlStep, TimeSpan measurementDuration, int measurementCount)
     {
         var results = new List<SNRSweepResult>();
-        if (soundDevice == null) return results;
-        if (controlStep == 0) controlStep = 1;
+        if (soundDevice == null)
+            return results;
+        if (controlStep == 0)
+            controlStep = 1;
 
         // Mixer element names to focus on (as requested). These should match your ALSA element names.
         var sweepControls = new[] {
@@ -44,20 +46,25 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
 
         // track current values so when we sweep one control the others remain at last-chosen setting
         var currentValues = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var c in sweepControls) currentValues[c] = 0; // initial 0 dB as you described
+        foreach (var c in sweepControls)
+            currentValues[c] = 0; // initial 0 dB as you described
 
         // helper to compute average dBFS from readings
         static double AvgDbfs(List<Example.SNRReduction.Models.AudioMeterLevelReading> r)
         {
-            if (r == null || r.Count == 0) return double.NaN;
-            double sum = 0; int n = 0;
+            if (r == null || r.Count == 0)
+                return double.NaN;
+            double sum = 0;
+            int n = 0;
             foreach (var it in r)
             {
-                if (it?.ChannelDbfs == null) continue;
+                if (it?.ChannelDbfs == null)
+                    continue;
                 for (int i = 0; i < it.ChannelDbfs.Count; i++)
                 {
                     var v = it.ChannelDbfs[i];
-                    if (!double.IsNaN(v)) { sum += v; n++; }
+                    if (!double.IsNaN(v))
+                    { sum += v; n++; }
                 }
             }
             return n == 0 ? double.NaN : sum / n;
@@ -90,7 +97,8 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                 double t = i / (double)sampleRate;
                 double s = Math.Sin(2.0 * Math.PI * freq * t) * amplitude;
                 short sample = (short)(s * short.MaxValue);
-                for (int ch = 0; ch < channels; ch++) bw.Write(sample);
+                for (int ch = 0; ch < channels; ch++)
+                    bw.Write(sample);
             }
             return ms.ToArray();
         }
@@ -129,7 +137,9 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
             {
                 _log.Error(ex, "Reference signal play failed");
             }
-            try { refReadings = refTask.Result; } catch { refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+            try
+            { refReadings = refTask.Result; }
+            catch { refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
             referenceSignalDb = AvgDbfs(refReadings);
             _log.Info($"Reference signal level: {referenceSignalDb:F2} dBFS");
         }
@@ -258,17 +268,25 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
             }
 
             // pick best value for this control (highest SNR) and keep it
-            double bestSNR = double.NegativeInfinity; int bestVal = currentValues[controlKey];
+            double bestSNR = double.NegativeInfinity;
+            int bestVal = currentValues[controlKey];
             foreach (var r in results)
             {
-                if (!string.Equals(r.ControlName, controlKey, StringComparison.OrdinalIgnoreCase)) continue;
-                if (double.IsNaN(r.SNRdB)) continue;
-                if (r.SNRdB > bestSNR) { bestSNR = r.SNRdB; bestVal = (int)r.Value; }
+                if (!string.Equals(r.ControlName, controlKey, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (double.IsNaN(r.SNRdB))
+                    continue;
+                if (r.SNRdB > bestSNR)
+                { bestSNR = r.SNRdB; bestVal = (int)r.Value; }
             }
             currentValues[controlKey] = bestVal;
             // ensure device uses bestVal
-            try { soundDevice.SetSimpleElementValue(controlKey, "Front Left", (nint)bestVal); } catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Left to {bestVal}: {ex.Message}"); }
-            try { soundDevice.SetSimpleElementValue(controlKey, "Front Right", (nint)bestVal); } catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Right to {bestVal}: {ex.Message}"); }
+            try
+            { soundDevice.SetSimpleElementValue(controlKey, "Front Left", (nint)bestVal); }
+            catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Left to {bestVal}: {ex.Message}"); }
+            try
+            { soundDevice.SetSimpleElementValue(controlKey, "Front Right", (nint)bestVal); }
+            catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Right to {bestVal}: {ex.Message}"); }
         }
 
 

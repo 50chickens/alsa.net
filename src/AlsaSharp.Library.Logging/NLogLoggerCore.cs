@@ -3,7 +3,7 @@ using NLog;
 
 namespace AlsaSharp.Library.Logging
 {
-    
+
     public class NLogLoggerCore<T> : ILog<T>
     {
         private readonly Logger _logger;
@@ -35,14 +35,16 @@ namespace AlsaSharp.Library.Logging
         private LogEventInfo CreateEvent(LogLevel level, object? payload, string? message)
         {
             var messageStr = message;
-            if (messageStr == null) messageStr = string.Empty;
+            if (messageStr == null)
+                messageStr = string.Empty;
             var evt = new LogEventInfo(level, _logger.Name, messageStr);
             if (payload != null)
             {
                 foreach (var kv in ToDictionary(payload))
                 {
                     var v = kv.Value;
-                    if (v == null) v = string.Empty;
+                    if (v == null)
+                        v = string.Empty;
                     evt.Properties[kv.Key] = v;
                 }
             }
@@ -53,10 +55,10 @@ namespace AlsaSharp.Library.Logging
         {
             var dict = new Dictionary<string, object?>();
             var t = payload.GetType();
-                foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
-                {
-                        dict[p.Name] = p.GetValue(payload);
-                }
+            foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                dict[p.Name] = p.GetValue(payload);
+            }
             return dict;
         }
     }

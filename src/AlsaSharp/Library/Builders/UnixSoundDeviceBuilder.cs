@@ -1,7 +1,7 @@
-﻿using AlsaSharp.Core.Native;
 using System.Runtime.InteropServices;
-using AlsaSharp.Library.Services;
+using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Library.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlsaSharp.Library.Builders;
@@ -26,7 +26,8 @@ public class UnixSoundDeviceBuilder
     /// </summary>
     public static IEnumerable<ISoundDevice> Build(IServiceProvider services, string? measurementFolder)
     {
-        if (services == null) throw new ArgumentNullException(nameof(services));
+        if (services == null)
+            throw new ArgumentNullException(nameof(services));
 
         var hintService = services.GetService<IHintService>();
         if (hintService == null)
@@ -39,7 +40,9 @@ public class UnixSoundDeviceBuilder
         if (!string.IsNullOrWhiteSpace(measurementFolder))
         {
             measurementFolder = measurementFolder.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            try { Directory.CreateDirectory(measurementFolder); } catch { }
+            try
+            { Directory.CreateDirectory(measurementFolder); }
+            catch { }
             timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         }
 
@@ -47,43 +50,43 @@ public class UnixSoundDeviceBuilder
         var list = new List<ISoundDevice>();
         foreach (var card in hintService.CardInfos)
         {
-                var name = card.Id ?? card.Name ?? $"card{card.Index}";
-                var soundDeviceSettings = new SoundDeviceSettings
-                {
-                    RecordingDeviceName = $"hw:CARD={name}",
-                    MixerDeviceName = $"hw:CARD={name}",
-                    PlaybackDeviceName = $"hw:CARD={name}",
-                    CardId = card.Id,
-                    CardName = card.Name,
-                    CardLongName = card.LongName,
-                    CardIndex = card.Index
-                };
-                // Do not probe ALSA here; runtime PCM initialization negotiates formats and updates settings.
-                // Probing at build time was redundant and produced misleading defaults.
-                // If measurement folder provided, compute per-device baseline file path and write header
-                if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
-                {
-                    var fileBase = SanitizeFileName(soundDeviceSettings.CardName ?? soundDeviceSettings.CardId ?? name);
-                    var jsonPath = Path.Combine(measurementFolder, $"baseline_{timestamp}_{fileBase}.json");
-                    soundDeviceSettings.BaselineFilePath = jsonPath;
-                    try
-                    {
-                        var jsonWriter = new AlsaSharp.Library.Logging.JsonWriter(jsonPath);
-                        jsonWriter.Append(new { Device = (object?)null, Card = new { Id = soundDeviceSettings.CardId, Name = soundDeviceSettings.CardName, LongName = soundDeviceSettings.CardLongName, SampleRate = soundDeviceSettings.RecordingSampleRate, BitsPerSample = soundDeviceSettings.RecordingBitsPerSample }, Timestamp = DateTime.UtcNow });
-                    }
-                    catch { }
-                }
-
-                var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
-                var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
-                // Log discovered device details here; runtime PCM negotiation produces authoritative params.
+            var name = card.Id ?? card.Name ?? $"card{card.Index}";
+            var soundDeviceSettings = new SoundDeviceSettings
+            {
+                RecordingDeviceName = $"hw:CARD={name}",
+                MixerDeviceName = $"hw:CARD={name}",
+                PlaybackDeviceName = $"hw:CARD={name}",
+                CardId = card.Id,
+                CardName = card.Name,
+                CardLongName = card.LongName,
+                CardIndex = card.Index
+            };
+            // Do not probe ALSA here; runtime PCM initialization negotiates formats and updates settings.
+            // Probing at build time was redundant and produced misleading defaults.
+            // If measurement folder provided, compute per-device baseline file path and write header
+            if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
+            {
+                var fileBase = SanitizeFileName(soundDeviceSettings.CardName ?? soundDeviceSettings.CardId ?? name);
+                var jsonPath = Path.Combine(measurementFolder, $"baseline_{timestamp}_{fileBase}.json");
+                soundDeviceSettings.BaselineFilePath = jsonPath;
                 try
                 {
-                    log?.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} (runtime params negotiated at open)");
+                    var jsonWriter = new AlsaSharp.Library.Logging.JsonWriter(jsonPath);
+                    jsonWriter.Append(new { Device = (object?)null, Card = new { Id = soundDeviceSettings.CardId, Name = soundDeviceSettings.CardName, LongName = soundDeviceSettings.CardLongName, SampleRate = soundDeviceSettings.RecordingSampleRate, BitsPerSample = soundDeviceSettings.RecordingBitsPerSample }, Timestamp = DateTime.UtcNow });
                 }
                 catch { }
-                list.Add(soundDevice);
-                devicesMetadata.Add(new { soundDeviceSettings.CardId, soundDeviceSettings.CardName, soundDeviceSettings.CardLongName, soundDeviceSettings.RecordingDeviceName, soundDeviceSettings.RecordingSampleRate, soundDeviceSettings.RecordingBitsPerSample, soundDeviceSettings.RecordingChannels });
+            }
+
+            var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
+            var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
+            // Log discovered device details here; runtime PCM negotiation produces authoritative params.
+            try
+            {
+                log?.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} (runtime params negotiated at open)");
+            }
+            catch { }
+            list.Add(soundDevice);
+            devicesMetadata.Add(new { soundDeviceSettings.CardId, soundDeviceSettings.CardName, soundDeviceSettings.CardLongName, soundDeviceSettings.RecordingDeviceName, soundDeviceSettings.RecordingSampleRate, soundDeviceSettings.RecordingBitsPerSample, soundDeviceSettings.RecordingChannels });
         }
 
         // Write a summary JSON into the measurement folder if requested
@@ -103,8 +106,10 @@ public class UnixSoundDeviceBuilder
 
     private static string SanitizeFileName(string s)
     {
-        if (string.IsNullOrWhiteSpace(s)) return "unknown";
-        foreach (var c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+        if (string.IsNullOrWhiteSpace(s))
+            return "unknown";
+        foreach (var c in Path.GetInvalidFileNameChars())
+            s = s.Replace(c, '_');
         return s.Replace(' ', '_');
     }
 }

@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
 using AlsaSharp;
 using AlsaSharp.Library;
 
@@ -18,8 +18,10 @@ namespace Example.SNRReduction.Services
         /// </summary>
         public DiagnosticResult AnalyzeDevice(ISoundDevice device, uint seconds, string outPath)
         {
-            if (device == null) throw new ArgumentNullException(nameof(device));
-            if (string.IsNullOrWhiteSpace(outPath)) throw new ArgumentNullException(nameof(outPath));
+            if (device == null)
+                throw new ArgumentNullException(nameof(device));
+            if (string.IsNullOrWhiteSpace(outPath))
+                throw new ArgumentNullException(nameof(outPath));
 
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outPath) ?? ".");
@@ -70,7 +72,8 @@ namespace Example.SNRReduction.Services
                             int b2 = buffer[sampleOffset + 2];
                             int v = (b0) | (b1 << 8) | (b2 << 16);
                             // sign extend
-                            if ((v & 0x800000) != 0) v |= unchecked((int)0xFF000000);
+                            if ((v & 0x800000) != 0)
+                                v |= unchecked((int)0xFF000000);
                             sample = v;
                         }
                         else if (bytesPerSample == 4)

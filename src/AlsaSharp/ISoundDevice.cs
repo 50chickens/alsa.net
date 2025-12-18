@@ -1,4 +1,4 @@
-﻿
+
 namespace AlsaSharp;
 
 /// <summary>
@@ -98,5 +98,5 @@ public interface ISoundDevice : IDisposable
     /// </summary>
     /// <param name="stateFilePath">Path to state file.</param>
     void RestoreStateFromAlsaStateFile(string stateFilePath);
-    
+
 }

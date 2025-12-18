@@ -6,7 +6,7 @@ namespace Example.SNRReduction.Services;
 
 public class SNRReductionOptionsValidationService : IValidateOptions<SNRReductionServiceOptions>
 {
-    
+
     public ValidateOptionsResult Validate(string? name, SNRReductionServiceOptions options)
     {
         // var failures = new List<string>();

@@ -91,13 +91,16 @@ namespace AlsaSharp.Library.Services
             try
             {
                 var ctlName = $"hw:{cardIndex}";
-                if (InteropAlsa.snd_ctl_open(out var ctl, ctlName, 0) != 0) return 0;
+                if (InteropAlsa.snd_ctl_open(out var ctl, ctlName, 0) != 0)
+                    return 0;
                 try
                 {
-                    if (InteropAlsa.snd_ctl_elem_list_malloc(out var list) != 0) return 0;
+                    if (InteropAlsa.snd_ctl_elem_list_malloc(out var list) != 0)
+                        return 0;
                     try
                     {
-                        if (InteropAlsa.snd_ctl_elem_list(ctl, list) != 0) return 0;
+                        if (InteropAlsa.snd_ctl_elem_list(ctl, list) != 0)
+                            return 0;
                         var cnt = InteropAlsa.snd_ctl_elem_list_get_count(list);
                         return cnt;
                     }
@@ -124,11 +127,14 @@ namespace AlsaSharp.Library.Services
             try
             {
                 var ctlName = $"hw:{cardIndex}";
-                if (InteropAlsa.snd_mixer_open(out var mixer, 0) != 0) return results;
+                if (InteropAlsa.snd_mixer_open(out var mixer, 0) != 0)
+                    return results;
                 try
                 {
-                    if (InteropAlsa.snd_mixer_attach(mixer, ctlName) != 0) return results;
-                    if (InteropAlsa.snd_mixer_load(mixer) != 0) return results;
+                    if (InteropAlsa.snd_mixer_attach(mixer, ctlName) != 0)
+                        return results;
+                    if (InteropAlsa.snd_mixer_load(mixer) != 0)
+                        return results;
                     var elem = InteropAlsa.snd_mixer_first_elem(mixer);
                     while (elem != IntPtr.Zero)
                     {
@@ -136,7 +142,8 @@ namespace AlsaSharp.Library.Services
                         if (namePtr != IntPtr.Zero)
                         {
                             var name = Marshal.PtrToStringUTF8(namePtr);
-                            if (!string.IsNullOrEmpty(name)) results.Add(name);
+                            if (!string.IsNullOrEmpty(name))
+                                results.Add(name);
                         }
                         elem = InteropAlsa.snd_mixer_elem_next(elem);
                     }
@@ -218,7 +225,8 @@ namespace AlsaSharp.Library.Services
             while (true)
             {
                 var hint = Marshal.ReadIntPtr(current);
-                if (hint == IntPtr.Zero) break;
+                if (hint == IntPtr.Zero)
+                    break;
                 results.Add(hint);
                 current += IntPtr.Size;
             }
@@ -228,7 +236,8 @@ namespace AlsaSharp.Library.Services
         private static string? GetHintValue(IntPtr hint, string key)
         {
             IntPtr valuePtr = InteropAlsa.snd_device_name_get_hint(hint, key);
-            if (valuePtr == IntPtr.Zero) return null;
+            if (valuePtr == IntPtr.Zero)
+                return null;
             var hintValue = Marshal.PtrToStringUTF8(valuePtr);
             InteropAlsa.free(valuePtr);
             return hintValue;
@@ -240,12 +249,16 @@ namespace AlsaSharp.Library.Services
             var desc = GetHintValue(hintPtr, "DESC");
             var ioid = GetHintValue(hintPtr, "IOID");
 
-            if (!IsNameValid(name)) return null;
-            if (!IsHardwareDevice(name)) return null;
+            if (!IsNameValid(name))
+                return null;
+            if (!IsHardwareDevice(name))
+                return null;
 
             // parse NAME using regex groups
-            if (string.IsNullOrWhiteSpace(name)) return null;
-            if (!TryParseName(name, out var iface, out var cardName, out var cardIndex, out var deviceIndex)) return null;
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+            if (!TryParseName(name, out var iface, out var cardName, out var cardIndex, out var deviceIndex))
+                return null;
 
             var control = new Control(cardIndex);
             string longName = GetCardLongName(cardIndex);
@@ -257,8 +270,10 @@ namespace AlsaSharp.Library.Services
 
         private bool TryParseName(string name, out InterfaceIdentificationType iface, out string cardId, out int cardIndex, out int deviceIndex) //use an extension method instead
         {
-            if (TryParseCardPattern(name, out iface, out cardId, out cardIndex, out deviceIndex)) return true;
-            if (TryParseIndexPattern(name, out iface, out cardId, out cardIndex, out deviceIndex)) return true;
+            if (TryParseCardPattern(name, out iface, out cardId, out cardIndex, out deviceIndex))
+                return true;
+            if (TryParseIndexPattern(name, out iface, out cardId, out cardIndex, out deviceIndex))
+                return true;
             return false;
         }
 
@@ -305,9 +320,11 @@ namespace AlsaSharp.Library.Services
                                     if (InteropAlsa.snd_ctl_pcm_info(ctl, pcmInfo) == 0)
                                     {
                                         var pid = Marshal.PtrToStringUTF8(InteropAlsa.snd_pcm_info_get_id(pcmInfo));
-                                        if (pid == null) throw new InvalidOperationException("GetAlsaCardInfos: pcm id is null");
+                                        if (pid == null)
+                                            throw new InvalidOperationException("GetAlsaCardInfos: pcm id is null");
                                         var pname = Marshal.PtrToStringUTF8(InteropAlsa.snd_pcm_info_get_name(pcmInfo));
-                                        if (pname == null) throw new InvalidOperationException("GetAlsaCardInfos: pcm name is null");
+                                        if (pname == null)
+                                            throw new InvalidOperationException("GetAlsaCardInfos: pcm name is null");
                                         var subCount = InteropAlsa.snd_pcm_info_get_subdevices_count(pcmInfo);
                                         var subdevices = new List<Subdevice>();
                                         for (var s = 0; s < subCount; ++s)
@@ -317,7 +334,8 @@ namespace AlsaSharp.Library.Services
                                             if (InteropAlsa.snd_ctl_pcm_info(ctl, pcmInfo) == 0)
                                             {
                                                 var subname = Marshal.PtrToStringUTF8(InteropAlsa.snd_pcm_info_get_subdevice_name(pcmInfo));
-                                                if (subname == null) throw new InvalidOperationException("GetAlsaCardInfos: pcm subdevice name is null");
+                                                if (subname == null)
+                                                    throw new InvalidOperationException("GetAlsaCardInfos: pcm subdevice name is null");
                                                 subdevices.Add(new Subdevice(s, subname));
                                             }
                                         }
@@ -352,12 +370,14 @@ namespace AlsaSharp.Library.Services
             deviceIndex = -1;
             var regexCard = new Regex(@"^(?<iface>[^:]+):CARD=(?<card>[^,]+)(?:,DEV=(?<dev>\d+))?$", RegexOptions.IgnoreCase);
             var m = regexCard.Match(name);
-            if (!m.Success) return false;
+            if (!m.Success)
+                return false;
             var ifaceStr = m.Groups["iface"].Value;
             cardId = m.Groups["card"].Value;
             var devStr = m.Groups["dev"].Value;
             int dev = 0;
-            if (!string.IsNullOrEmpty(devStr)) dev = int.Parse(devStr);
+            if (!string.IsNullOrEmpty(devStr))
+                dev = int.Parse(devStr);
             var cardIdx = GetCardIndexByName(cardId);
             var iftype = MapInterfaceToType(ifaceStr);
             iface = iftype;
@@ -374,7 +394,8 @@ namespace AlsaSharp.Library.Services
             deviceIndex = -1;
             var regexIndex = new Regex(@"^(?<iface>[^:]+):(?<card>\d+),(?<dev>\d+)$", RegexOptions.IgnoreCase);
             var m2 = regexIndex.Match(name);
-            if (!m2.Success) return false;
+            if (!m2.Success)
+                return false;
             var ifaceStr = m2.Groups["iface"].Value;
             var cardNum = int.Parse(m2.Groups["card"].Value);
             var devNum = int.Parse(m2.Groups["dev"].Value);
@@ -406,14 +427,16 @@ namespace AlsaSharp.Library.Services
                 {
                     var name = Marshal.PtrToStringUTF8(p);
                     InteropAlsa.free(p);
-                    if (name != null && name.Equals(cardName, StringComparison.OrdinalIgnoreCase)) return card;
+                    if (name != null && name.Equals(cardName, StringComparison.OrdinalIgnoreCase))
+                        return card;
                 }
                 // If not exact match on card ID, try longname contains matching
                 if (InteropAlsa.snd_card_get_longname(card, out IntPtr longp) == 0 && longp != IntPtr.Zero)
                 {
                     var longname = Marshal.PtrToStringUTF8(longp);
                     InteropAlsa.free(longp);
-                    if (longname != null && longname.IndexOf(cardName, StringComparison.OrdinalIgnoreCase) >= 0) return card;
+                    if (longname != null && longname.IndexOf(cardName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return card;
                 }
                 InteropAlsa.snd_card_next(ref card);
             }
@@ -426,7 +449,8 @@ namespace AlsaSharp.Library.Services
             {
                 var s = Marshal.PtrToStringUTF8(p);
                 InteropAlsa.free(p);
-                if (s == null) throw new InvalidOperationException($"Could not get card name for index {index} (null string)");
+                if (s == null)
+                    throw new InvalidOperationException($"Could not get card name for index {index} (null string)");
                 return s;
             }
             throw new InvalidOperationException($"Could not get card name for index {index}");
@@ -438,7 +462,8 @@ namespace AlsaSharp.Library.Services
             {
                 var s = Marshal.PtrToStringUTF8(p);
                 InteropAlsa.free(p);
-                if (s == null) throw new InvalidOperationException($"Could not get longname for card index {index} (null string)");
+                if (s == null)
+                    throw new InvalidOperationException($"Could not get longname for card index {index} (null string)");
                 return s;
             }
             throw new InvalidOperationException($"Could not get longname for card index {index}");

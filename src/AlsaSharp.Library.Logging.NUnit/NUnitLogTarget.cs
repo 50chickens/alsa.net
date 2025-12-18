@@ -1,4 +1,4 @@
-﻿using NLog.Targets;
+using NLog.Targets;
 using NUnit.Framework;
 
 namespace AlsaSharp.Tests.NUnit

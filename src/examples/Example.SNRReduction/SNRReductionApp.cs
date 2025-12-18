@@ -1,6 +1,6 @@
-﻿using AlsaSharp.Library.Logging;
-using Example.SNRReduction.Models;
+using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Interfaces;
+using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
 namespace Example.SNRReduction;
 
@@ -33,7 +33,7 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService con
         var measurementResults = _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(TimeSpan.FromSeconds(3), 10, "Baseline recording");
         measurementResults.ForEach(r =>
         {
-            var dbfs = r.ChannelDbfs != null && r.ChannelDbfs.Count > 0 ? string.Join(", ", r.ChannelDbfs.Select((v, i) => $"Ch{i+1}:{v:F2}dBFS")) : "no-channels";
+            var dbfs = r.ChannelDbfs != null && r.ChannelDbfs.Count > 0 ? string.Join(", ", r.ChannelDbfs.Select((v, i) => $"Ch{i + 1}:{v:F2}dBFS")) : "no-channels";
             _log.Info($"Timestamp: {r.TimestampUtc}, {dbfs}");
         });
         return measurementResults;

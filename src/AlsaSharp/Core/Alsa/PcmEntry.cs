@@ -28,7 +28,8 @@ namespace AlsaSharp.Core.Alsa
             _id = id ?? throw new InvalidOperationException("AlsaPcmEntry: id is null");
             _name = name ?? throw new InvalidOperationException("AlsaPcmEntry: name is null");
             _subdevices = subdevices ?? throw new InvalidOperationException("AlsaPcmEntry: subdevices is null");
-            if (_subdevices.Count == 0) throw new InvalidOperationException("AlsaPcmEntry: expected at least one subdevice");
+            if (_subdevices.Count == 0)
+                throw new InvalidOperationException("AlsaPcmEntry: expected at least one subdevice");
             _subdeviceName = _subdevices[0].Name;
             _subdevicesCount = subdevicesCount;
             _stream = stream ?? throw new InvalidOperationException("AlsaPcmEntry: stream is null");

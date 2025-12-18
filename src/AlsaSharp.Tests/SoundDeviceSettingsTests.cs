@@ -1,4 +1,4 @@
-﻿using AlsaSharp.Library.Builders;
+using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
@@ -39,8 +39,8 @@ namespace AlsaSharp.Tests
 
             // create virtual interface to use your config
             using var alsaDevice = AlsaDeviceBuilder.Build(config);
-             var message = JsonConvert.SerializeObject(new { alsaDevice });
-             _log.Info(message);
+            var message = JsonConvert.SerializeObject(new { alsaDevice });
+            _log.Info(message);
         }
     }
 }

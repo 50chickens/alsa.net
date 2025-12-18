@@ -1,5 +1,5 @@
-using AlsaSharp.Library.Logging;
 using System;
+using AlsaSharp.Library.Logging;
 
 namespace Example.SNRReduction.Services;
 
@@ -10,9 +10,12 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
 
     public SNRAnalysisResult AnalyzeSNR(float[] samples, int sampleRate, double targetFreq, int originalFrames = 0, int originalChannels = 1, int originalBytesPerSample = 0)
     {
-        if (samples == null) throw new ArgumentNullException(nameof(samples));
-        if (sampleRate <= 0) throw new ArgumentException("sampleRate must be > 0", nameof(sampleRate));
-        if (targetFreq <= 0) throw new ArgumentException("targetFreq must be > 0", nameof(targetFreq));
+        if (samples == null)
+            throw new ArgumentNullException(nameof(samples));
+        if (sampleRate <= 0)
+            throw new ArgumentException("sampleRate must be > 0", nameof(sampleRate));
+        if (targetFreq <= 0)
+            throw new ArgumentException("targetFreq must be > 0", nameof(targetFreq));
 
         int nsamples = Math.Max(1, (int)Math.Round((double)sampleRate / targetFreq));
         int nsamplesPerSection = nsamples * 2;
@@ -37,7 +40,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
             target[i] = Math.Sin(2.0 * Math.PI * i * targetFreq / sampleRate) * RANGE_FACTOR;
         }
         double tmpAcc = 0.0;
-        for (int i = 0; i < nsamples; i++) tmpAcc += target[i] * target[i];
+        for (int i = 0; i < nsamples; i++)
+            tmpAcc += target[i] * target[i];
         double rmsTgt = Math.Sqrt(tmpAcc / nsamples);
 
         // slide through available sections (overlap permitted)
@@ -52,7 +56,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
             }
             // copy section as doubles for numerical stability
             var section = new double[nsamplesPerSection];
-            for (int k = 0; k < nsamplesPerSection; k++) section[k] = samples[offset + k];
+            for (int k = 0; k < nsamplesPerSection; k++)
+                section[k] = samples[offset + k];
 
             int shift = -1;
             for (int i = 0; i < nsamples && i + 1 < section.Length; i++)
@@ -60,7 +65,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
                 if (section[i] >= 0.0 && section[i + 1] < 0.0)
                 {
                     double d = section[i] - section[i + 1];
-                    if (Math.Abs(d) < 1e-12) continue;
+                    if (Math.Abs(d) < 1e-12)
+                        continue;
                     shift = i;
                     break;
                 }
@@ -78,7 +84,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
                 double s0 = section[shift];
                 double s1 = section[shift + 1];
                 double d = s0 - s1;
-                if (Math.Abs(d) < 1e-12) { a = 1.0; b = 0.0; }
+                if (Math.Abs(d) < 1e-12)
+                { a = 1.0; b = 0.0; }
                 else
                 {
                     a = s0 / d;
@@ -95,7 +102,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
 
             // compute rms of aligned source
             double sumSq = 0.0;
-            for (int i = 0; i < nsamples; i++) sumSq += srcAligned[i] * srcAligned[i];
+            for (int i = 0; i < nsamples; i++)
+                sumSq += srcAligned[i] * srcAligned[i];
             double rms = Math.Sqrt(sumSq / nsamples);
             if (rms <= 0)
             {
@@ -104,7 +112,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
             }
 
             double gain = rmsTgt / rms;
-            for (int i = 0; i < nsamples; i++) srcAligned[i] = (srcAligned[i] * gain);
+            for (int i = 0; i < nsamples; i++)
+                srcAligned[i] = (srcAligned[i] * gain);
 
             // compute residual energy
             double residual = 0.0;
@@ -159,7 +168,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
                 for (int h = 2; h <= maxHarmonic; h++)
                 {
                     double f = targetFreq * h;
-                    if (f >= sampleRate / 2.0) break; // beyond Nyquist
+                    if (f >= sampleRate / 2.0)
+                        break; // beyond Nyquist
                     harmonicPower += GoertzelPower(srcAligned, sampleRate, f);
                 }
                 if (fundamentalPower > 0.0)
@@ -172,7 +182,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
             sumSignalPower += signalPower;
             sumOutputPower += outputPower;
             sumNoisePower += noisePower;
-            if (double.IsFinite(thdRatio)) sumThdRatio += thdRatio;
+            if (double.IsFinite(thdRatio))
+                sumThdRatio += thdRatio;
         }
 
         if (cntClean == 0)
@@ -220,7 +231,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
         if (sumThdRatio > 0.0)
         {
             double avgThdRatio = sumThdRatio / cntClean;
-            if (avgThdRatio > 0.0) avgThdDb = 10.0 * Math.Log10(avgThdRatio);
+            if (avgThdRatio > 0.0)
+                avgThdDb = 10.0 * Math.Log10(avgThdRatio);
         }
 
         return new SNRAnalysisResult
@@ -254,7 +266,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
     // Local helper: Goertzel power estimate (mean-square) for a frequency in the provided samples.
     static double GoertzelPower(double[] data, int sampleRate, double freq)
     {
-        if (data == null || data.Length == 0) return 0.0;
+        if (data == null || data.Length == 0)
+            return 0.0;
         int N = data.Length;
         double omega = 2.0 * Math.PI * freq / sampleRate;
         double coeff = 2.0 * Math.Cos(omega);
@@ -267,7 +280,8 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
         }
         // magnitude squared (unnormalized)
         double power = s_prev * s_prev + s_prev2 * s_prev2 - coeff * s_prev * s_prev2;
-        if (!double.IsFinite(power) || power < 0.0) power = 0.0;
+        if (!double.IsFinite(power) || power < 0.0)
+            power = 0.0;
         return power / N;
     }
 }

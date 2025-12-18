@@ -1,4 +1,4 @@
-﻿using AlsaSharp.Tests.Library;
+using AlsaSharp.Tests.Library;
 using AlsaSharp.Tests.NUnit;
 using Microsoft.Extensions.Configuration;
 

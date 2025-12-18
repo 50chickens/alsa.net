@@ -1,6 +1,6 @@
-﻿using AlsaSharp.Core.Native;
-using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using AlsaSharp.Core.Native;
+using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library;
 
@@ -189,7 +189,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         nuint frames;
 
         fixed (int* dirP = &dir)
-                ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP), ExceptionMessages.CanNotGetPeriodSize);
+            ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP), ExceptionMessages.CanNotGetPeriodSize);
 
         var bufferSize = frames * header.BlockAlign;
         var readBuffer = new byte[(int)bufferSize];
@@ -244,62 +244,67 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             }
         }
 
-            // Read back negotiated hw params (format, rate, channels) so callers can
-            // correctly interpret captured sample bytes. Do this after snd_pcm_hw_params
-            // so we get the actual values ALSA selected.
+        // Read back negotiated hw params (format, rate, channels) so callers can
+        // correctly interpret captured sample bytes. Do this after snd_pcm_hw_params
+        // so we get the actual values ALSA selected.
+        try
+        {
+            Core.Native.snd_pcm_format_t fmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN;
+            uint rate = 0;
+            int rdir = 0;
+            uint channels = 0;
+            // Attempt to read format/rate/channels; failures should not be fatal
+            _ = InteropAlsa.snd_pcm_hw_params_get_format(@params, &fmt);
+            _ = InteropAlsa.snd_pcm_hw_params_get_rate(@params, &rate, &rdir);
+            _ = InteropAlsa.snd_pcm_hw_params_get_channels(@params, &channels);
+
+            // Map ALSA format to bits per sample when possible
+            ushort bits = Settings.RecordingBitsPerSample;
+            switch (fmt)
+            {
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_BE:
+                    bits = 16;
+                    break;
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_BE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3BE:
+                    bits = 24;
+                    break;
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_BE:
+                    bits = 32;
+                    break;
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE:
+                case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_BE:
+                    // leave bits as-is but callers may need to support float
+                    break;
+                default:
+                    break;
+            }
+
+            if (rate != 0)
+                Settings.RecordingSampleRate = rate;
+            if (channels != 0)
+                Settings.RecordingChannels = (ushort)channels;
+            Settings.RecordingBitsPerSample = bits;
+            // If this initialization is for the recording PCM, log the negotiated
+            // audio capture parameters so callers can see the actual runtime values.
             try
             {
-                Core.Native.snd_pcm_format_t fmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN;
-                uint rate = 0;
-                int rdir = 0;
-                uint channels = 0;
-                // Attempt to read format/rate/channels; failures should not be fatal
-                _ = InteropAlsa.snd_pcm_hw_params_get_format(@params, &fmt);
-                _ = InteropAlsa.snd_pcm_hw_params_get_rate(@params, &rate, &rdir);
-                _ = InteropAlsa.snd_pcm_hw_params_get_channels(@params, &channels);
-
-                // Map ALSA format to bits per sample when possible
-                ushort bits = Settings.RecordingBitsPerSample;
-                switch (fmt)
+                if (pcm == _recordingPcm)
                 {
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_BE:
-                        bits = 16; break;
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_BE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3BE:
-                        bits = 24; break;
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_BE:
-                        bits = 32; break;
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE:
-                    case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_BE:
-                        // leave bits as-is but callers may need to support float
-                        break;
-                    default:
-                        break;
+                    _log?.LogDebug("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
+                        Settings.RecordingDeviceName, Settings.RecordingSampleRate, Settings.RecordingBitsPerSample, Settings.RecordingChannels);
                 }
-
-                if (rate != 0) Settings.RecordingSampleRate = rate;
-                if (channels != 0) Settings.RecordingChannels = (ushort)channels;
-                Settings.RecordingBitsPerSample = bits;
-                // If this initialization is for the recording PCM, log the negotiated
-                // audio capture parameters so callers can see the actual runtime values.
-                try
-                {
-                    if (pcm == _recordingPcm)
-                    {
-                        _log?.LogDebug("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
-                            Settings.RecordingDeviceName, Settings.RecordingSampleRate, Settings.RecordingBitsPerSample, Settings.RecordingChannels);
-                    }
-                }
-                catch { /* best-effort logging only */ }
             }
-            catch (Exception ex)
-            {
-                _log?.LogError(ex, "[ALSA DEBUG] Could not read negotiated hw params");
-            }
+            catch { /* best-effort logging only */ }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogError(ex, "[ALSA DEBUG] Could not read negotiated hw params");
+        }
     }
 
     void SetPlaybackVolume(nint volume)
@@ -399,7 +404,8 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                 // Draining can block indefinitely with some plugins (eg. pipewire); dropping
                 // is faster and avoids hang during shutdown.
                 var rc = InteropAlsa.snd_pcm_drop(_playbackPcm);
-                if (rc < 0) _log?.LogError("[ALSA ERROR] Can not drop playback device: {Error}", InteropAlsa.StrError(rc));
+                if (rc < 0)
+                    _log?.LogError("[ALSA ERROR] Can not drop playback device: {Error}", InteropAlsa.StrError(rc));
             }
             catch (Exception ex)
             {
@@ -409,7 +415,8 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             try
             {
                 var rc2 = InteropAlsa.snd_pcm_close(_playbackPcm);
-                if (rc2 < 0) _log?.LogError("[ALSA ERROR] Can not close playback device: {Error}", InteropAlsa.StrError(rc2));
+                if (rc2 < 0)
+                    _log?.LogError("[ALSA ERROR] Can not close playback device: {Error}", InteropAlsa.StrError(rc2));
             }
             catch (Exception ex)
             {
@@ -441,7 +448,8 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                 // Prefer dropping the PCM instead of draining to avoid blocking in
                 // plugins like pipewire when shutting down. Drop stops immediately.
                 var rc = InteropAlsa.snd_pcm_drop(_recordingPcm);
-                if (rc < 0) _log?.LogError("[ALSA ERROR] Can not drop recording device: {Error}", InteropAlsa.StrError(rc));
+                if (rc < 0)
+                    _log?.LogError("[ALSA ERROR] Can not drop recording device: {Error}", InteropAlsa.StrError(rc));
             }
             catch (Exception ex)
             {
@@ -451,7 +459,8 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             try
             {
                 var rc2 = InteropAlsa.snd_pcm_close(_recordingPcm);
-                if (rc2 < 0) _log?.LogError("[ALSA ERROR] Can not close recording device: {Error}", InteropAlsa.StrError(rc2));
+                if (rc2 < 0)
+                    _log?.LogError("[ALSA ERROR] Can not close recording device: {Error}", InteropAlsa.StrError(rc2));
             }
             catch (Exception ex)
             {
@@ -573,16 +582,20 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                             if (string.IsNullOrEmpty(channelName) || channelName.IndexOf("both", StringComparison.OrdinalIgnoreCase) >= 0 || channelName.IndexOf("all", StringComparison.OrdinalIgnoreCase) >= 0)
                             {
                                 var rvSwitch = InteropAlsa.snd_mixer_selem_set_playback_switch_all(elem, switchVal);
-                                if (rvSwitch >= 0) return rvSwitch;
+                                if (rvSwitch >= 0)
+                                    return rvSwitch;
                                 rvSwitch = InteropAlsa.snd_mixer_selem_set_capture_switch_all(elem, switchVal);
-                                if (rvSwitch >= 0) return rvSwitch;
+                                if (rvSwitch >= 0)
+                                    return rvSwitch;
                             }
                             else
                             {
                                 var rvSwitch = InteropAlsa.snd_mixer_selem_set_playback_switch(elem, ch, switchVal);
-                                if (rvSwitch >= 0) return rvSwitch;
+                                if (rvSwitch >= 0)
+                                    return rvSwitch;
                                 rvSwitch = InteropAlsa.snd_mixer_selem_set_capture_switch(elem, ch, switchVal);
-                                if (rvSwitch >= 0) return rvSwitch;
+                                if (rvSwitch >= 0)
+                                    return rvSwitch;
                             }
                         }
                         catch (Exception ex)
@@ -614,7 +627,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         {
             CloseMixer();
         }
-    }   
+    }
 
     public void RestoreStateFromAlsaStateFile(string stateFilePath)
     {
@@ -657,7 +670,8 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                     string key = parts[0];
                     string rawVal = parts[1];
                     // if more tokens exist, last token is value
-                    if (parts.Length > 2) rawVal = parts[parts.Length - 1];
+                    if (parts.Length > 2)
+                        rawVal = parts[parts.Length - 1];
 
                     // try boolean
                     if (string.Equals(rawVal, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(rawVal, "false", StringComparison.OrdinalIgnoreCase))
@@ -670,12 +684,16 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                             if (int.TryParse(idxPart, out int idx) && idx >= 0)
                             {
                                 var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
-                                try { SetSimpleElementValue(currentName, ch, v); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, v); }
+                                try
+                                { SetSimpleElementValue(currentName, ch, v); }
+                                catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, v); }
                             }
                         }
                         else
                         {
-                            try { SetSimpleElementValue(currentName, string.Empty, v); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, v); }
+                            try
+                            { SetSimpleElementValue(currentName, string.Empty, v); }
+                            catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, v); }
                         }
                         continue;
                     }
@@ -689,12 +707,16 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                             if (int.TryParse(idxPart, out int idx) && idx >= 0)
                             {
                                 var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
-                                try { SetSimpleElementValue(currentName, ch, intVal); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, intVal); }
+                                try
+                                { SetSimpleElementValue(currentName, ch, intVal); }
+                                catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name}:{Channel} -> {Value}", currentName, ch, intVal); }
                             }
                         }
                         else
                         {
-                            try { SetSimpleElementValue(currentName, string.Empty, intVal); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, intVal); }
+                            try
+                            { SetSimpleElementValue(currentName, string.Empty, intVal); }
+                            catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState: failed to set {Name} -> {Value}", currentName, intVal); }
                         }
                         continue;
                     }
@@ -714,12 +736,16 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                                 if (int.TryParse(idxPart, out int idx) && idx >= 0)
                                 {
                                     var ch = idx == 0 ? "left" : (idx == 1 ? "right" : "");
-                                    try { SetSimpleElementValue(currentName, ch, enumIndex); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name}:{Channel} -> {Value}", currentName, ch, enumIndex); }
+                                    try
+                                    { SetSimpleElementValue(currentName, ch, enumIndex); }
+                                    catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name}:{Channel} -> {Value}", currentName, ch, enumIndex); }
                                 }
                             }
                             else
                             {
-                                try { SetSimpleElementValue(currentName, string.Empty, enumIndex); } catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name} -> {Value}", currentName, enumIndex); }
+                                try
+                                { SetSimpleElementValue(currentName, string.Empty, enumIndex); }
+                                catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name} -> {Value}", currentName, enumIndex); }
                             }
                         }
                         else

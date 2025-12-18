@@ -15,9 +15,11 @@ public class AudioMeterLevelReading()
     public string ChannelRmsUnit { get; set; } = "root-mean-square (linear, full-scale=1.0)";
     public override string ToString()
     {
-        if (ChannelDbfs == null || ChannelDbfs.Count == 0) return "No channels";
+        if (ChannelDbfs == null || ChannelDbfs.Count == 0)
+            return "No channels";
         // Display RMS in dBFS units (use ChannelDbfs which already contains 20*log10(rms)).
-        if (ChannelDbfs.Count == 1) return $"Channel1Dbfs={ChannelDbfs[0]:F2} {ChannelDbfsUnit}, Channel1Rms={(ChannelRms.Count>0 ? ChannelRms[0] : ChannelDbfs[0]):F2} {ChannelRmsUnit} (1 channel).";
-        return string.Join(", ", ChannelDbfs.Select((v, i) => $"Ch{i+1}Dbfs={v:F2}{(string.IsNullOrEmpty(ChannelDbfsUnit) ? string.Empty : " " + ChannelDbfsUnit)}"));
+        if (ChannelDbfs.Count == 1)
+            return $"Channel1Dbfs={ChannelDbfs[0]:F2} {ChannelDbfsUnit}, Channel1Rms={(ChannelRms.Count > 0 ? ChannelRms[0] : ChannelDbfs[0]):F2} {ChannelRmsUnit} (1 channel).";
+        return string.Join(", ", ChannelDbfs.Select((v, i) => $"Ch{i + 1}Dbfs={v:F2}{(string.IsNullOrEmpty(ChannelDbfsUnit) ? string.Empty : " " + ChannelDbfsUnit)}"));
     }
 }

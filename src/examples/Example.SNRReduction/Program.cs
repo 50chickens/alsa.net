@@ -1,5 +1,6 @@
 using AlsaSharp;
 using AlsaSharp.Library.Builders;
+using AlsaSharp.Library.Extensions;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Audio;
 using Example.SNRReduction.Extensions;
@@ -7,7 +8,6 @@ using Example.SNRReduction.Interfaces;
 using Example.SNRReduction.Logging;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
-using AlsaSharp.Library.Extensions;
 using Microsoft.Extensions.Options;
 using NLog.Extensions.Logging;
 
@@ -34,7 +34,7 @@ internal class Program
         builder.Services.AddOptions<AudioLevelMeterRecorderServiceOptions>().Bind(builder.Configuration.GetSection(AudioLevelMeterRecorderServiceOptions.Settings));
         builder.Services.AddOptions<AudioCardOptions>().Bind(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(new ControlSweepOptions(new List<AlsaControl>()));
-        
+
         builder.Services.AddSingleton<IControlSweepService>(serviceProvider =>
         {
             var log = serviceProvider.GetRequiredService<ILog<SignalNoiseRatioOptimizer>>();
@@ -91,7 +91,7 @@ internal class Program
 
         builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
         builder.Services.AddHostedService<SNRReductionWorker>();
-    
+
         var host = builder.Build();
 
         var logger = host.Services.GetRequiredService<ILog<Program>>();
@@ -100,7 +100,7 @@ internal class Program
         logger.Info("Application finished.");
 
     }
-    
+
 }
 
 public static class ServiceExtensions

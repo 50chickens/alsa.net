@@ -1,10 +1,10 @@
-using AlsaSharp;
-using AlsaSharp.Library.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using AlsaSharp;
+using AlsaSharp.Library.Logging;
 
 namespace Example.SNRReduction;
 
@@ -43,7 +43,8 @@ public class SNRTools
             double t = i / (double)sampleRate;
             double s = Math.Sin(2.0 * Math.PI * freq * t) * amplitude;
             short sample = (short)(s * short.MaxValue);
-            for (int ch = 0; ch < channels; ch++) bw.Write(sample);
+            for (int ch = 0; ch < channels; ch++)
+                bw.Write(sample);
         }
         return ms.ToArray();
     }
@@ -68,21 +69,30 @@ public class SNRTools
 
         void OnData(byte[] buffer)
         {
-            if (buffer is null || buffer.Length == 0) return;
-            if (!headerSeen) { headerSeen = true; return; }
-            const int bytesPerSample = 2; const int channels = 2;
+            if (buffer is null || buffer.Length == 0)
+                return;
+            if (!headerSeen)
+            { headerSeen = true; return; }
+            const int bytesPerSample = 2;
+            const int channels = 2;
             int frameCount = buffer.Length / (bytesPerSample * channels);
-            if (frameCount <= 0) return;
-            long sumSqL = 0, sumSqR = 0; int samples = 0;
+            if (frameCount <= 0)
+                return;
+            long sumSqL = 0, sumSqR = 0;
+            int samples = 0;
             for (int i = 0; i < frameCount; i++)
             {
                 int offset = i * channels * bytesPerSample;
-                if (offset + 3 >= buffer.Length) break;
+                if (offset + 3 >= buffer.Length)
+                    break;
                 short sL = BitConverter.ToInt16(buffer, offset);
                 short sR = BitConverter.ToInt16(buffer, offset + 2);
-                sumSqL += (long)sL * sL; sumSqR += (long)sR * sR; samples++;
+                sumSqL += (long)sL * sL;
+                sumSqR += (long)sR * sR;
+                samples++;
             }
-            if (samples == 0) return;
+            if (samples == 0)
+                return;
             double rms = Math.Sqrt((sumSqL + sumSqR) / (double)(samples * 2)) / 32768.0;
             rmsList.Add(rms);
         }
@@ -134,21 +144,29 @@ public class SNRTools
 
         void OnData(byte[] buffer)
         {
-            if (buffer is null || buffer.Length == 0) return;
-            if (!headerSeen) { headerSeen = true; return; }
+            if (buffer is null || buffer.Length == 0)
+                return;
+            if (!headerSeen)
+            { headerSeen = true; return; }
             const int bytesPerSample = 2, chs = 2;
             int frameCount = buffer.Length / (bytesPerSample * chs);
-            if (frameCount <= 0) return;
-            long sumSqL = 0, sumSqR = 0; int samples = 0;
+            if (frameCount <= 0)
+                return;
+            long sumSqL = 0, sumSqR = 0;
+            int samples = 0;
             for (int i = 0; i < frameCount; i++)
             {
                 int offset = i * chs * bytesPerSample;
-                if (offset + 3 >= buffer.Length) break;
+                if (offset + 3 >= buffer.Length)
+                    break;
                 short sL = BitConverter.ToInt16(buffer, offset);
                 short sR = BitConverter.ToInt16(buffer, offset + 2);
-                sumSqL += (long)sL * sL; sumSqR += (long)sR * sR; samples++;
+                sumSqL += (long)sL * sL;
+                sumSqR += (long)sR * sR;
+                samples++;
             }
-            if (samples == 0) return;
+            if (samples == 0)
+                return;
             double rms = Math.Sqrt((sumSqL + sumSqR) / (double)(samples * 2)) / 32768.0;
             rmsList.Add(rms);
         }

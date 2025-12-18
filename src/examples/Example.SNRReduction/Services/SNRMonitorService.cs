@@ -1,5 +1,5 @@
-using AlsaSharp.Library.Logging;
 using AlsaSharp;
+using AlsaSharp.Library.Logging;
 
 namespace Example.SNRReduction.Services;
 
@@ -11,16 +11,19 @@ public class SNRMonitorService(ILog<SNRMonitorService> log, ISNRWorkerHelper hel
 
     public async Task RunContinuousMonitoringAsync(ISoundDevice device, TimeSpan measureDuration, int samples, string measurementFolder, CancellationToken token)
     {
-        if (device == null) return;
+        if (device == null)
+            return;
         var settings = device.Settings;
-        if (settings == null) return;
+        if (settings == null)
+            return;
 
         for (int i = 0; i < samples; i++)
         {
             using var ms = new MemoryStream();
             using var ctsRec = CancellationTokenSource.CreateLinkedTokenSource(token);
             ctsRec.CancelAfter(TimeSpan.FromSeconds(2));
-            void OnData(byte[] buf) { try { ms.Write(buf, 0, buf.Length); } catch { } }
+            void OnData(byte[] buf)
+            { try { ms.Write(buf, 0, buf.Length); } catch { } }
             try
             {
                 device.Record(OnData, ctsRec.Token);

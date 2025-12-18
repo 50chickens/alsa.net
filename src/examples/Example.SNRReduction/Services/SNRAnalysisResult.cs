@@ -20,7 +20,7 @@ public class SNRAnalysisResult
     /// it is measured by dividing the audio sample into smaller segments (sections) and calculating the SNR for each segment separately.
     /// This allows for a more detailed analysis of the audio quality over time, as different sections may have varying levels of noise and signal strength.
     public List<double> SectionSnrDb { get; set; } = new List<double>();
-    
+
     /// Frames represents the total number of audio frames in the sample.
     public int Frames { get; set; }
     /// Channels represents the number of audio channels in the sample.

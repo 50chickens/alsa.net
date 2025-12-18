@@ -1,9 +1,9 @@
 using System;
-using NUnit.Framework;
-using AlsaSharp.Library.Logging;
-using AlsaSharp.Tests.NUnit;
-using AlsaSharp.Tests.Library;
 using AlsaSharp.Core.Native;
+using AlsaSharp.Library.Logging;
+using AlsaSharp.Tests.Library;
+using AlsaSharp.Tests.NUnit;
+using NUnit.Framework;
 
 namespace AlsaSharp.Tests
 {

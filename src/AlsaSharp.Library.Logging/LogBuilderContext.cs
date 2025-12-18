@@ -1,4 +1,4 @@
-﻿using Common.Logging;
+using Common.Logging;
 using Microsoft.Extensions.Configuration;
 
 namespace AlsaSharp.Library.Logging

@@ -8,7 +8,8 @@ public static class UnixSoundDeviceBuilderExtensions
 {
     public static IServiceCollection AddUnixSoundDeviceBuilder(this IServiceCollection services, string? measurementFolder = null)
     {
-        if (services == null) throw new ArgumentNullException(nameof(services));
+        if (services == null)
+            throw new ArgumentNullException(nameof(services));
 
         // Ensure the hint service is registered
         services.AddHintService(HintServiceBuilder.Build);

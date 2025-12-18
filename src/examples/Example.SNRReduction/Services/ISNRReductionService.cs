@@ -1,4 +1,4 @@
-﻿using AlsaSharp;
+using AlsaSharp;
 using Example.SNRReduction.Services;
 
 namespace Example.SNRReduction.Interfaces;

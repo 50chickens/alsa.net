@@ -1,4 +1,4 @@
-﻿namespace AlsaSharp.Library;
+namespace AlsaSharp.Library;
 
 /// <summary>
 /// exception thrown when something goes wrong while transfering data between

@@ -17,7 +17,7 @@ public class AlsaSanityTester(string label, Microsoft.Extensions.Logging.ILogger
         {
             IntPtr p;
             returnCode = Native.snd_card_get_name(card, out p);
-            _log.LogInformation("snd_card_get_name -> rc={Rc}, ptr={Ptr}", returnCode, (p==IntPtr.Zero ? "<null>" : p.ToString()));
+            _log.LogInformation("snd_card_get_name -> rc={Rc}, ptr={Ptr}", returnCode, (p == IntPtr.Zero ? "<null>" : p.ToString()));
             if (returnCode == 0 && p != IntPtr.Zero)
             {
                 string name = Marshal.PtrToStringUTF8(p) ?? string.Empty;
@@ -27,7 +27,7 @@ public class AlsaSanityTester(string label, Microsoft.Extensions.Logging.ILogger
 
             IntPtr q;
             returnCode = Native.snd_card_get_longname(card, out q);
-            _log.LogInformation("snd_card_get_longname -> rc={Rc}, ptr={Ptr}", returnCode, (q==IntPtr.Zero ? "<null>" : q.ToString()));
+            _log.LogInformation("snd_card_get_longname -> rc={Rc}, ptr={Ptr}", returnCode, (q == IntPtr.Zero ? "<null>" : q.ToString()));
             if (returnCode == 0 && q != IntPtr.Zero)
             {
                 string longname = Marshal.PtrToStringUTF8(q) ?? string.Empty;

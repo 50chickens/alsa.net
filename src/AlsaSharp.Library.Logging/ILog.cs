@@ -14,5 +14,5 @@ namespace AlsaSharp.Library.Logging
         void Trace(string message);
     }
 
-    
+
 }

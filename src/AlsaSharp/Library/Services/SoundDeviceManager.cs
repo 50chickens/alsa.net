@@ -1,7 +1,7 @@
+using System.Runtime.InteropServices;
 using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Audio;
 using AlsaSharp.Library.Logging;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services
@@ -26,7 +26,7 @@ namespace AlsaSharp.Library.Services
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _logger = logger;
         }
-        
+
         /// <summary>
         /// Enumerate mixer controls for this card using libasound APIs.
         /// Returns an array of MixerControlInfo with basic channel raw values and ranges.
@@ -44,7 +44,8 @@ namespace AlsaSharp.Library.Services
             {
                 // open mixer
                 int returnCode = InteropAlsa.snd_mixer_open(out mixer, 0);
-                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_open failed: {InteropAlsa.StrError(returnCode)}");
+                if (returnCode < 0)
+                    throw new InvalidOperationException($"snd_mixer_open failed: {InteropAlsa.StrError(returnCode)}");
 
                 // Prefer attaching mixer by card short name when available
                 // (e.g. "hw:CARD=IQaudIOCODEC"). If the MixerDeviceName
@@ -56,21 +57,26 @@ namespace AlsaSharp.Library.Services
                     : $"hw:CARD={mixerDeviceName}";
 
                 returnCode = InteropAlsa.snd_mixer_attach(mixer, attachName);
-                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(returnCode)}");
+                if (returnCode < 0)
+                    throw new InvalidOperationException($"snd_mixer_attach failed: {InteropAlsa.StrError(returnCode)}");
 
                 returnCode = InteropAlsa.snd_mixer_selem_register(mixer, IntPtr.Zero, IntPtr.Zero);
-                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_selem_register failed: {InteropAlsa.StrError(returnCode)}");
+                if (returnCode < 0)
+                    throw new InvalidOperationException($"snd_mixer_selem_register failed: {InteropAlsa.StrError(returnCode)}");
 
                 returnCode = InteropAlsa.snd_mixer_load(mixer);
-                if (returnCode < 0) throw new InvalidOperationException($"snd_mixer_load failed: {InteropAlsa.StrError(returnCode)}");
+                if (returnCode < 0)
+                    throw new InvalidOperationException($"snd_mixer_load failed: {InteropAlsa.StrError(returnCode)}");
 
                 var elem = InteropAlsa.snd_mixer_first_elem(mixer);
                 while (elem != IntPtr.Zero)
                 {
                     var namePtr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                    if (namePtr == IntPtr.Zero) throw new InvalidOperationException("Mixer element name pointer is null");
+                    if (namePtr == IntPtr.Zero)
+                        throw new InvalidOperationException("Mixer element name pointer is null");
                     var simpleElementName = Marshal.PtrToStringUTF8(namePtr);
-                    if (simpleElementName == null) throw new InvalidOperationException("Mixer element name is null");
+                    if (simpleElementName == null)
+                        throw new InvalidOperationException("Mixer element name is null");
                     var channels = new List<MixerSimpleElement>();
 
                     // check common channels (front left/right and mono)
@@ -78,7 +84,8 @@ namespace AlsaSharp.Library.Services
                     foreach (var ch in channelIds)
                     {
                         int hasPlayback = InteropAlsa.snd_mixer_selem_has_playback_channel(elem, ch);
-                        if (hasPlayback <= 0) continue;
+                        if (hasPlayback <= 0)
+                            continue;
 
                         // Make sure the element actually supports playback volume operations.
                         int hasVolume = InteropAlsa.snd_mixer_selem_has_playback_volume(elem);

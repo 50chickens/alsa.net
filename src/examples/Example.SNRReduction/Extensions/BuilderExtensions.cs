@@ -1,5 +1,6 @@
 using Example.SNRReduction.Models;
 namespace Example.SNRReduction.Extensions;
+
 static class AddAudioServiceExtension
 {
     public static IServiceCollection AddAudioService(this IServiceCollection services, Action<SNRReductionServiceOptions> configureOptions)

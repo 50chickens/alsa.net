@@ -27,17 +27,21 @@ public interface ISNRWorkerHelper
 
         public void OnData(byte[] buffer)
         {
-            if (!_headerSeen) { _headerSeen = true; return; }
+            if (!_headerSeen)
+            { _headerSeen = true; return; }
 
             int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
             int bytesPerSample = Math.Max(1, bitsPerSample / 8);
             int channels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
 
-            if (channels <= 0) channels = 1;
+            if (channels <= 0)
+                channels = 1;
 
             int frameCount = buffer.Length / (bytesPerSample * channels);
-            if (frameCount <= 0) return;
-            while (SumSq.Count < channels) SumSq.Add(0);
+            if (frameCount <= 0)
+                return;
+            while (SumSq.Count < channels)
+                SumSq.Add(0);
 
             for (int i = 0; i < frameCount; i++)
             {
@@ -45,12 +49,14 @@ public interface ISNRWorkerHelper
                 for (int ch = 0; ch < channels; ch++)
                 {
                     int so = offset + ch * bytesPerSample;
-                    if (so + bytesPerSample - 1 >= buffer.Length) break;
+                    if (so + bytesPerSample - 1 >= buffer.Length)
+                        break;
                     long sample = 0;
                     if (bytesPerSample == 3)
                     {
                         int v = buffer[so] | (buffer[so + 1] << 8) | (buffer[so + 2] << 16);
-                        if ((v & 0x800000) != 0) v |= unchecked((int)0xFF000000);
+                        if ((v & 0x800000) != 0)
+                            v |= unchecked((int)0xFF000000);
                         sample = v;
                     }
                     else if (bytesPerSample == 4)
@@ -82,7 +88,8 @@ public interface ISNRWorkerHelper
             double maxAmp = Math.Pow(2.0, bits - 1) - 1.0;
 
             var sumSq = SumSq ?? new List<long>();
-            while (sumSq.Count < deviceChannels) sumSq.Add(0);
+            while (sumSq.Count < deviceChannels)
+                sumSq.Add(0);
 
             var channelRms = new List<double>(deviceChannels);
             var channelDbfs = new List<double>(deviceChannels);

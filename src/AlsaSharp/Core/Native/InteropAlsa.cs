@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace AlsaSharp.Core.Native;
 
@@ -189,7 +189,7 @@ internal static class InteropAlsa
     // which fills a caller-provided buffer. Do not marshal as returning a pointer (that caused stack corruption).
     [DllImport(AlsaLibrary, CallingConvention = CConvention, CharSet = CSet)]
     public static extern int snd_mixer_selem_get_enum_item_name(IntPtr elem, uint idx, UIntPtr maxlen, System.Text.StringBuilder str);
-    
+
     [DllImport(AlsaLibrary, CallingConvention = CConvention)]
     public static extern int snd_mixer_selem_get_enum_item(IntPtr elem, snd_mixer_selem_channel_id channel, out uint item);
 

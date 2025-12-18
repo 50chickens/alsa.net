@@ -1,4 +1,5 @@
 namespace Example.SNRReduction.Models;
+
 public class ControlSweepConfigurationOption
 {
     public string ControlName { get; set; } = string.Empty;

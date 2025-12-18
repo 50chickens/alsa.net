@@ -1,9 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
 using AlsaSharp;
 using AlsaSharp.Library;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Services;
-using System.Collections.Generic;
-using System.Linq;
 #nullable enable
 
 namespace Example.SNRReduction.Audio;
@@ -23,11 +23,11 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
         Task? task = null;
         try
         {
-                lock (_recordLock)
-                {
-                    task = Task.Run(() => _device.Record(acc.OnData, cts.Token));
-                    task.Wait(cts.Token);
-                }
+            lock (_recordLock)
+            {
+                task = Task.Run(() => _device.Record(acc.OnData, cts.Token));
+                task.Wait(cts.Token);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -61,7 +61,8 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
 
         // use accumulated sums from Accumulator
         var sumSq = acc.SumSq ?? new List<long>();
-        while (sumSq.Count < deviceChannels) sumSq.Add(0);
+        while (sumSq.Count < deviceChannels)
+            sumSq.Add(0);
 
         var channelRms = new List<double>(deviceChannels);
         var channelDbfs = new List<double>(deviceChannels);
@@ -75,50 +76,57 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
         return (channelDbfs, channelRms);
     }
 
-        private class Accumulator
+    private class Accumulator
     {
         private readonly ISoundDevice _device;
-            public List<long> SumSq = new List<long>();
-            public int Samples;
-            private bool _headerSeen;
+        public List<long> SumSq = new List<long>();
+        public int Samples;
+        private bool _headerSeen;
 
-            public Accumulator(ISoundDevice device)
-            {
-                _device = device;
-                SumSq = new List<long>();
-                Samples = 0;
-                _headerSeen = false;
-            }
-
-            public void OnData(byte[] buffer)
+        public Accumulator(ISoundDevice device)
         {
-            if (!_headerSeen) { _headerSeen = true; return; }
+            _device = device;
+            SumSq = new List<long>();
+            Samples = 0;
+            _headerSeen = false;
+        }
+
+        public void OnData(byte[] buffer)
+        {
+            if (!_headerSeen)
+            { _headerSeen = true; return; }
 
             int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
             int bytesPerSample = Math.Max(1, bitsPerSample / 8);
             int channels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
 
-            if (channels <= 0) channels = 1;
+            if (channels <= 0)
+                channels = 1;
 
             int frameCount = buffer.Length / (bytesPerSample * channels);
-            if (frameCount <= 0) return;
+            if (frameCount <= 0)
+                return;
             // ensure SumSq list capacity
-            while (SumSq.Count < channels) SumSq.Add(0);
+            while (SumSq.Count < channels)
+                SumSq.Add(0);
             for (int i = 0; i < frameCount; i++)
-                {
-                    int offset = i * channels * bytesPerSample;
-                    if (offset + bytesPerSample - 1 >= buffer.Length) break;
+            {
+                int offset = i * channels * bytesPerSample;
+                if (offset + bytesPerSample - 1 >= buffer.Length)
+                    break;
 
                 // read all channels generically
                 for (int ch = 0; ch < channels; ch++)
                 {
                     int so = offset + ch * bytesPerSample;
-                    if (so + bytesPerSample - 1 >= buffer.Length) break;
+                    if (so + bytesPerSample - 1 >= buffer.Length)
+                        break;
                     long sample = 0;
                     if (bytesPerSample == 3)
                     {
                         int v = buffer[so] | (buffer[so + 1] << 8) | (buffer[so + 2] << 16);
-                        if ((v & 0x800000) != 0) v |= unchecked((int)0xFF000000);
+                        if ((v & 0x800000) != 0)
+                            v |= unchecked((int)0xFF000000);
                         sample = v;
                     }
                     else if (bytesPerSample == 4)
@@ -132,7 +140,7 @@ public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLe
                     SumSq[ch] += sample * sample;
                 }
                 Samples++;
-                }
+            }
         }
     }
 }

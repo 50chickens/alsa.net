@@ -21,6 +21,6 @@ namespace AlsaSharp.Library.Logging
         public void Error(string message) => _logger.LogError(message);
         public void Error(Exception ex, string message) => _logger.LogError(ex, message);
         public void Trace(string message) => _logger.LogTrace(message);
-        
+
     }
 }

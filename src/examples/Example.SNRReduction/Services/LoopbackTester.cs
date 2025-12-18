@@ -10,9 +10,11 @@ public class LoopbackTester(ILog<LoopbackTester> log, ISNRWorkerHelper helper) :
 
     public async Task RunLoopbackTestAsync(ISoundDevice device, CancellationToken token)
     {
-        if (device == null) return;
+        if (device == null)
+            return;
         var settings = device.Settings;
-        if (settings == null) return;
+        if (settings == null)
+            return;
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         cts.CancelAfter(TimeSpan.FromSeconds(4));
@@ -20,8 +22,10 @@ public class LoopbackTester(ILog<LoopbackTester> log, ISNRWorkerHelper helper) :
         var acc = _helper.CreateAccumulator(device);
         using var playStream = _helper.BuildInlineSineWav(settings, 1000.0, 3.0);
 
-        var playTask = Task.Run(() => {
-            try { device.Play(playStream, cts.Token); }
+        var playTask = Task.Run(() =>
+        {
+            try
+            { device.Play(playStream, cts.Token); }
             catch (Exception ex) { _log?.Warn($"Loopback tone playback failed: {ex.Message}"); }
         });
 

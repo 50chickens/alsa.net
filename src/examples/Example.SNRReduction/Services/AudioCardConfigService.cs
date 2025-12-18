@@ -34,7 +34,8 @@ namespace Example.SNRReduction.Services
             var candidates = new[] { "ADC Right", "ADC Left" };
             foreach (var c in candidates)
             {
-                if (SetDaiLeftSourceMux(cardIndex, c)) return c;
+                if (SetDaiLeftSourceMux(cardIndex, c))
+                    return c;
             }
             return null;
         }

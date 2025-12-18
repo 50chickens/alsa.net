@@ -1,4 +1,4 @@
-﻿namespace AlsaSharp;
+namespace AlsaSharp;
 
 /// <summary>
 /// settings on how to connect to and use your alsa devices

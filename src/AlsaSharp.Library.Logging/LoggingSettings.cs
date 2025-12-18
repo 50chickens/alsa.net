@@ -1,4 +1,4 @@
-﻿using NLog;
+using NLog;
 
 namespace AlsaSharp.Library.Logging
 {

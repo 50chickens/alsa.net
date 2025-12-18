@@ -1,4 +1,4 @@
-﻿using NLog.Config;
+using NLog.Config;
 using NLog.Targets;
 
 namespace AlsaSharp.Library.Logging
