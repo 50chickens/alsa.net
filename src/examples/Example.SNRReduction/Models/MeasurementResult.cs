@@ -21,5 +21,20 @@ public class MeasurementResult
     public TimeSpan Interval { get; set; }
     public TimeSpan MeasureWindow { get; set; }
     public string Description { get; set; } = string.Empty;
+    // Units (long descriptive names matching alsabat conventions)
+    // Timestamp is expressed in Coordinated Universal Time
+    public string TimestampUnit { get; set; } = "UTC";
+    // Durations / windows are expressed in seconds
+    public string TotalDurationUnit { get; set; } = "seconds";
+    public string IntervalUnit { get; set; } = "seconds";
+    public string MeasureWindowUnit { get; set; } = "seconds";
+    // Per-channel level units: decibels relative to full scale
+    public string ChannelDbfsUnit { get; set; } = "decibels relative to full scale (dBFS)";
+    // Per-channel RMS values: root-mean-square (linear, full-scale = 1.0)
+    public string ChannelRmsUnit { get; set; } = "root-mean-square (linear, full-scale=1.0)";
+    // Total harmonic distortion for the measurement (if available)
+    // Unit: decibels (dB) — matches the analyzer's THD output
+    public double? TotalHarmonicDistortionDb { get; set; }
+    public string TotalHarmonicDistortionUnit { get; set; } = "decibels (dB)";
     public List<AudioMeterLevelReading> Readings { get; set; } = new List<AudioMeterLevelReading>();
 }

@@ -1,5 +1,6 @@
 using Example.SNRReduction.Models;
 using Microsoft.Extensions.Options;
+#nullable enable
 
 namespace Example.SNRReduction.Services;
 

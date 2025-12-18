@@ -53,12 +53,26 @@ internal class Program
         var measurementFolder = snrSection.GetValue<string>("MeasurementFolder") ?? "~/.SNRReduction";
         builder.Services.AddUnixSoundDeviceBuilder(measurementFolder);
         builder.Services.AddSingleton<Example.SNRReduction.Services.AudioCardConfigService>();
+        builder.Services.AddSingleton<ISNRMeasurementService, SNRMeasurementService>();
+        builder.Services.AddSingleton<ISNRWorkerHelper, SNRWorkerHelper>();
+        builder.Services.AddSingleton<ILoopbackTester, LoopbackTester>();
+        builder.Services.AddSingleton<ISNRMonitorService, SNRMonitorService>();
+        // Register concrete or noop audio level recorder implementation based on configuration.
+        var measureAudioLevels = snrSection.GetValue<bool>("MeasureAudioLevels", false);
+        if (measureAudioLevels)
+        {
+            builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
+        }
+        else
+        {
+            builder.Services.AddSingleton<IAudioLevelMeterRecorderService, NoopAudioLevelMeterRecorder>();
+        }
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Logging.ClearProviders();
 
-        builder.Logging.SetMinimumLevel(LogLevel.Debug);
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
         // Suppress informational lifecycle messages from the host which can appear
         // during graceful shutdown and cause confusing interleaved output.
         builder.Logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.Warning);
@@ -93,8 +107,10 @@ public static class ServiceExtensions
 {
     public static IServiceCollection AddSNRReductionWorker(this IServiceCollection services)
     {
-
-        services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
+        // Do not register the concrete AudioLevelMeterRecorderService here unconditionally.
+        // Registration of a concrete or noop implementation is performed in Program
+        // based on configuration (MeasureAudioLevels) to avoid instantiating the
+        // recorder when audio-level measurements are disabled.
         services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
         services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
         services.AddSingleton<SNRReductionWorker>();

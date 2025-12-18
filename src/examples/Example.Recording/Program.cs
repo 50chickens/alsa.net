@@ -10,16 +10,12 @@ class Program
         // create virtual interface to system default audio device
         using var alsaDevice = AlsaDeviceBuilder.Build(new SoundDeviceSettings());
 
-        // create stream to hold recorded data - will be pcm data including wav header
-        using var outputStream = new MemoryStream();
-
-        // create a cancellation token to stop recording after 10s
-        using var tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
-        // actually record
-        alsaDevice.Record(outputStream, tokenSource.Token);
-
-        // alternative: record for 10s directly to file
-        //alsaDevice.Record(10, "output.wav");
+        // record 5 seconds directly to a diagnostic WAV (allowed per user's instruction)
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var folder = Path.Combine(home, ".SNRReduction");
+        Directory.CreateDirectory(folder);
+        var outPath = Path.Combine(folder, "alsabat_diag.wav");
+        Console.WriteLine($"Recording diagnostic WAV to: {outPath}");
+        alsaDevice.Record(5u, outPath);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using AlsaSharp;
+#nullable enable
 
 namespace Example.SNRReduction.Services
 {

@@ -22,4 +22,6 @@ public class SNRReductionServiceOptions
     /// (e.g. try ADC Right/ADC Left) before taking measurements. Default is false.
     /// </summary>
     public bool AutoConfigureDaiMux { get; set; } = false;
+    public bool MeasureSNR { get; set; } = true;
+    public bool MeasureAudioLevels { get; set; } = false;
 }

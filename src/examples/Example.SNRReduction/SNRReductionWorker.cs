@@ -24,6 +24,8 @@ public class SNRReductionWorker : BackgroundService
     private readonly IControlSweepService _sweepService;
     private readonly IEnumerable<ISoundDevice> _soundDevices;
     private readonly IServiceProvider _services;
+    private readonly ISNRMeasurementService _alsabatService;
+    private readonly ISNRWorkerHelper _helper;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly string _timestamp;
     
@@ -36,7 +38,9 @@ public class SNRReductionWorker : BackgroundService
         IHostApplicationLifetime lifetime,
         IControlSweepService sweepService,
         IEnumerable<ISoundDevice> soundDevices,
-        IServiceProvider services)
+        IServiceProvider services,
+        ISNRMeasurementService alsabatService,
+        ISNRWorkerHelper helper)
     {
         _log = log ?? throw new ArgumentNullException(nameof(log));
         _recorderOptions = recorderOptions?.Value ?? new AudioLevelMeterRecorderServiceOptions(3, 1, "Baseline recording");
@@ -45,16 +49,19 @@ public class SNRReductionWorker : BackgroundService
         _sweepService = sweepService ?? throw new ArgumentNullException(nameof(sweepService));
         _soundDevices = soundDevices ?? throw new ArgumentNullException(nameof(soundDevices));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _alsabatService = alsabatService ?? throw new ArgumentNullException(nameof(alsabatService));
+        _helper = helper ?? throw new ArgumentNullException(nameof(helper));
         _timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _log.Info("SNRReductionWorker starting baseline measurement...");
+        _log.Trace("SNRReductionWorker starting baseline measurement...");
 
-        _measureDuration = TimeSpan.FromSeconds(_recorderOptions.MeasurementDuration);
-        _measurementCount = _recorderOptions.MeasurementCount;
+        // Force a single baseline measurement of 15 seconds for quicker diagnostics
+        _measureDuration = TimeSpan.FromSeconds(15);
+        _measurementCount = 1;
 
         // Resolve measurement folder from options and ensure it exists
         var measurementFolder = _snrReductionServiceOptions?.MeasurementFolder ?? "~/.SNRReduction";
@@ -62,124 +69,47 @@ public class SNRReductionWorker : BackgroundService
         Directory.CreateDirectory(measurementFolder);
 
         // Apply ALSA state file per-device if configured (use library restore, not alsactl)
-        if (!string.IsNullOrWhiteSpace(_snrReductionServiceOptions.ApplyAlsaStateFile))
+        var applyAlsaState = _snrReductionServiceOptions!.ApplyAlsaStateFile;
+        if (!string.IsNullOrWhiteSpace(applyAlsaState))
         {
-            _log.Info("Applying ALSA state file before measurement as configured for all discovered cards.");
-
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName?.Replace("~", home) ?? home;
-
-            // If the configured value looks like a full path (rooted or contains a separator), use it
-            // otherwise combine with the default folder.
-            string requested = _snrReductionServiceOptions.ApplyAlsaStateFile;
-            string stateFilePath;
-            try
-            {
-                if (Path.IsPathRooted(requested) || requested.Contains(Path.DirectorySeparatorChar) || requested.Contains('/'))
-                {
-                    stateFilePath = requested.Replace("~", home);
-                }
-                else
-                {
-                    stateFilePath = Path.Combine(folderPath, requested);
-                }
-
-                foreach (var dev in _soundDevices)
-                {
-                    try
-                    {
-                        _log.Info($"Applying ALSA state for device {dev?.Settings?.RecordingDeviceName} from: {stateFilePath}");
-                        dev.RestoreStateFromAlsaStateFile(stateFilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Warn($"Failed to apply ALSA state for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.Warn($"Failed to resolve/apply ALSA state file '{_snrReductionServiceOptions.ApplyAlsaStateFile}': {ex.Message}");
-            }
-        }
-        
-        // Try to configure audio cards to a sane starting state (example: DAI Left Source MUX)
-        if (_snrReductionServiceOptions.AutoConfigureDaiMux)
-        {
-            try
-            {
-                var cfg = _services.GetService<Example.SNRReduction.Services.AudioCardConfigService>();
-                if (cfg != null)
-                {
-                    foreach (var dev in _soundDevices)
-                    {
-                        try
-                        {
-                            var cardIndex = dev?.Settings?.CardIndex ?? 0;
-                            var chosen = cfg.TryPreferredDaiMux(cardIndex);
-                            _log.Info($"DAI Left Source MUX for card {cardIndex} set to: {chosen ?? "(none)"}");
-                        }
-                        catch (Exception ex)
-                        {
-                            _log.Warn($"Failed to configure DAI MUX for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.Warn($"AudioCardConfigService error: {ex.Message}");
-            }
+            ApplyAlsaState();
         }
 
-        // Check DAI MUX routing and warn if left/right selections differ (may cause imbalance)
-        try
+        // Perform loopback tone tests via LoopbackTester service when enabled
+        if (_snrReductionServiceOptions.MeasureSNR)
         {
-            var left = AlsaSharp.MixerManager.GetElementValue( (int?)null ?? 0, "DAI Left Source MUX");
-            var right = AlsaSharp.MixerManager.GetElementValue( (int?)null ?? 0, "DAI Right Source MUX");
-            if (left.Success && right.Success && left.Type == "enum" && right.Type == "enum")
-            {
-                if (!string.Equals(left.Value, right.Value, StringComparison.OrdinalIgnoreCase))
-                {
-                    _log.Warn($"Detected DAI mux mismatch: Left='{left.Value}' Right='{right.Value}'. This may cause L/R imbalance.");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.Trace($"DAI MUX check failed: {ex.Message}");
+            await RunLoopbackToneTestsAsync(stoppingToken);
         }
 
-        _log.Info($"Starting measurement: duration={_measureDuration.TotalSeconds}s count={_measurementCount} for {_soundDevices.Count()} devices");
+        _log.Trace($"Starting measurement: duration={_measureDuration.TotalSeconds}s count={_measurementCount} for {_soundDevices.Count()} devices");
 
-        // Baseline summary and per-device headers are created by the UnixSoundDeviceBuilder at registration time
+        // Run continuous Alsabat-style SNR measurements via ISNRMonitorService when enabled
+        if (_snrReductionServiceOptions.MeasureSNR)
+        {
+            await MeasureSNROnAllDevices(measurementFolder, stoppingToken);
+        }
 
         foreach (var device in _soundDevices)
         {
-            var settings = device?.Settings;
+            if (device == null) continue;
+            var settings = device.Settings;
+            if (settings == null) continue;
 
             // Prefer baseline file path created by the builder; fallback to worker naming if absent
-            var jsonPath = settings?.BaselineFilePath;
+            var jsonPath = settings.BaselineFilePath;
             if (string.IsNullOrWhiteSpace(jsonPath))
             {
-                var cardId = settings?.CardId ?? "unknown";
-                var cardName = settings?.CardName ?? settings?.RecordingDeviceName ?? "unknown";
-                var fileBase = SanitizeFileName(cardName ?? cardId ?? "unknown");
+                var cardId = settings.CardId ?? "unknown";
+                var cardName = settings.CardName ?? settings.RecordingDeviceName ?? "unknown";
+                var fileBase = _helper.SanitizeFileName(cardName ?? cardId ?? "unknown");
                 jsonPath = Path.Combine(measurementFolder, $"baseline_{_timestamp}_{fileBase}.json");
             }
 
             _log.Trace("Running baseline measurement (appending to header file)");
 
-            // Create per-device meter and recorder instances
-            var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
-            var recorderLog = _services.GetRequiredService<ILog<AudioLevelMeterRecorderService>>();
-            var meter = new AudioInterfaceLevelMeter(device, meterLog);
-            var recorder = new AudioLevelMeterRecorderService(recorderLog, meter, _recorderOptions);
-
             try
             {
-                var results = recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, jsonPath);
-                _log.Info($"Baseline completed and written to {jsonPath}");
+                MeasureAudioLevelsAndSaveMeasurements(device, jsonPath);
             }
             catch (Exception ex)
             {
@@ -215,10 +145,122 @@ public class SNRReductionWorker : BackgroundService
         await Task.CompletedTask;
     }
 
-    private static string SanitizeFileName(string s)
+    private void MeasureAudioLevelsAndSaveMeasurements(ISoundDevice device, string jsonPath)
     {
-        if (string.IsNullOrWhiteSpace(s)) return "unknown";
-        foreach (var c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
-        return s.Replace(' ', '_');
+        if (_snrReductionServiceOptions.MeasureAudioLevels)
+        {
+            // Create per-device meter and recorder instances only when requested
+            var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
+            var recorderLog = _services.GetRequiredService<ILog<AudioLevelMeterRecorderService>>();
+            var meter = new AudioInterfaceLevelMeter(device, meterLog);
+            var recorder = new AudioLevelMeterRecorderService(recorderLog, meter, _recorderOptions);
+
+            var results = recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, jsonPath);
+            _log.Info($"Baseline completed and written to {jsonPath}");
+        }
+        else
+        {
+            _log.Info("MeasureAudioLevels is false; skipping audio level baseline recording.");
+        }
     }
+
+    private async Task MeasureSNROnAllDevices(string measurementFolder, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var monitor = _services.GetService<ISNRMonitorService>();
+            if (monitor != null)
+            {
+                foreach (var device in _soundDevices)
+                {
+                    try
+                    {
+                        if (device == null) continue;
+                        var settings = device.Settings;
+                        if (settings == null) continue;
+                        _log.Info($"Starting continuous SNR monitoring on device {settings.RecordingDeviceName} (15 samples, 1s each)");
+                        int samples = 15;
+                        await monitor.RunContinuousMonitoringAsync(device, _measureDuration, samples, measurementFolder, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warn($"Continuous SNR monitoring failed for device {device?.Settings?.RecordingDeviceName}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Trace($"Continuous SNR monitoring failed: {ex.Message}");
+        }
+    }
+
+    private async Task RunLoopbackToneTestsAsync(CancellationToken stoppingToken)
+    {
+        var tester = _services.GetService<ILoopbackTester>();
+        if (tester != null)
+        {
+            foreach (var device in _soundDevices)
+            {
+                try
+                {
+                    if (device == null) continue;
+                    var settings = device.Settings;
+                    if (settings == null) continue;
+                    _log.Info($"Running loopback tone test on card {settings.CardId ?? settings.CardName ?? "unknown"}");
+                    await tester.RunLoopbackTestAsync(device, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"Loopback test failed for device {device?.Settings?.CardId}: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private void ApplyAlsaState()
+    {
+        _log.Info("Applying ALSA state file before measurement as configured for all discovered cards.");
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string folderPath = _snrReductionServiceOptions.DefaultAudioStateFolderName?.Replace("~", home) ?? home;
+
+        // If the configured value looks like a full path (rooted or contains a separator), use it
+        // otherwise combine with the default folder.
+        string requested = _snrReductionServiceOptions.ApplyAlsaStateFile;
+        string stateFilePath;
+        try
+        {
+            if (Path.IsPathRooted(requested) || requested.Contains(Path.DirectorySeparatorChar) || requested.Contains('/'))
+            {
+                stateFilePath = requested.Replace("~", home);
+            }
+            else
+            {
+                stateFilePath = Path.Combine(folderPath, requested);
+            }
+
+            foreach (var dev in _soundDevices)
+            {
+                if (dev == null) continue;
+                try
+                {
+                    var dsettings = dev.Settings;
+                    _log.Info($"Applying ALSA state for device {dsettings?.RecordingDeviceName} from: {stateFilePath}");
+                    dev.RestoreStateFromAlsaStateFile(stateFilePath);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"Failed to apply ALSA state for device {dev?.Settings?.RecordingDeviceName}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"Failed to resolve/apply ALSA state file '{_snrReductionServiceOptions.ApplyAlsaStateFile}': {ex.Message}");
+        }
+    }
+
+
+
 }

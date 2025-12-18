@@ -4,6 +4,7 @@ using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Services;
 using System.Collections.Generic;
 using System.Linq;
+#nullable enable
 
 namespace Example.SNRReduction.Audio;
 

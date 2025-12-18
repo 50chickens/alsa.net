@@ -7,9 +7,9 @@ namespace Example.SNRReduction.Services;
 
 public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, ControlSweepOptions controlSweepOptions, IAudioLevelMeterRecorderService audioLevelMeterRecorderService) : IControlSweepService
 {
-    private readonly ILog<SignalNoiseRatioOptimizer> _log = log;
-    private ControlSweepOptions _controlSweepOptions = controlSweepOptions;
-    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService;
+    private readonly ILog<SignalNoiseRatioOptimizer> _log = log ?? throw new ArgumentNullException(nameof(log));
+    private ControlSweepOptions _controlSweepOptions = controlSweepOptions ?? new ControlSweepOptions(new List<AlsaControl>());
+    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
 
     // small no-op logger implementation used when creating helper tools
     
@@ -141,6 +141,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
         // iterate controls; for each, sweep its range while keeping others at currentValues
         foreach (var control in sweepControls)
         {
+            var controlKey = control ?? "(unknown)";
             for (int val = controlMin; val <= controlMax; val += controlStep)
             {
                 try
@@ -148,40 +149,41 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                     // set other controls to their current values first
                     foreach (var kv in currentValues)
                     {
+                        var k = kv.Key ?? "(unknown)";
                         try
                         {
-                            soundDevice.SetSimpleElementValue(kv.Key, "Front Left", (nint)kv.Value);
+                            soundDevice.SetSimpleElementValue(k, "Front Left", (nint)kv.Value);
                         }
                         catch (Exception ex)
                         {
-                            _log.Error(ex, $"Failed to set {kv.Key} Front Left to {kv.Value}");
+                            _log.Error(ex, $"Failed to set {k} Front Left to {kv.Value}");
                         }
                         try
                         {
-                            soundDevice.SetSimpleElementValue(kv.Key, "Front Right", (nint)kv.Value);
+                            soundDevice.SetSimpleElementValue(k, "Front Right", (nint)kv.Value);
                         }
                         catch (Exception ex)
                         {
-                            _log.Error(ex, $"Failed to set {kv.Key} Front Right to {kv.Value}");
+                            _log.Error(ex, $"Failed to set {k} Front Right to {kv.Value}");
                         }
                     }
 
                     // set the control under test to new value
                     try
                     {
-                        soundDevice.SetSimpleElementValue(control, "Front Left", (nint)val);
+                        soundDevice.SetSimpleElementValue(control ?? "(unknown)", "Front Left", (nint)val);
                     }
                     catch (Exception ex)
                     {
-                        _log.Error(ex, $"Failed to set {control} Front Left to {val}");
+                        _log.Error(ex, $"Failed to set {control ?? "(unknown)"} Front Left to {val}");
                     }
                     try
                     {
-                        soundDevice.SetSimpleElementValue(control, "Front Right", (nint)val);
+                        soundDevice.SetSimpleElementValue(control ?? "(unknown)", "Front Right", (nint)val);
                     }
                     catch (Exception ex)
                     {
-                        _log.Error(ex, $"Failed to set {control} Front Right to {val}");
+                        _log.Error(ex, $"Failed to set {control ?? "(unknown)"} Front Right to {val}");
                     }
 
                     // settle
@@ -189,23 +191,42 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
 
                     // measure noise (no tone)
                     List<AudioMeterLevelReading> noiseReadings = new List<AudioMeterLevelReading>();
-                    var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control}={val}"));
-                    try { noiseReadings = noiseTask.Result; } catch { noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+                    var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control ?? "(unknown)"}={val}"));
+                    try
+                    {
+                        noiseReadings = noiseTask.Result;
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warn($"Noise measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                        noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                    }
 
                     double noiseDb = AvgDbfs(noiseReadings);
 
                     // generate tone and play while recording
                     var tone = GenerateToneWav(sampleRate, channels, bits, toneFreq, measureSeconds, 0.5);
                     List<Example.SNRReduction.Models.AudioMeterLevelReading> sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
-                    var recordTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Signal {control}={val}"));
+                    var recordTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Signal {control ?? "(unknown)"}={val}"));
                     try
                     {
                         // play tone (blocking until done)
                         using var msTone = new MemoryStream(tone);
                         soundDevice.Play(msTone, System.Threading.CancellationToken.None);
                     }
-                    catch { }
-                    try { sigReadings = recordTask.Result; } catch { sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
+                    catch (Exception ex)
+                    {
+                        _log.Warn($"Tone play failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                    }
+                    try
+                    {
+                        sigReadings = recordTask.Result;
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Warn($"Signal measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                        sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                    }
 
                     double signalDb = AvgDbfs(sigReadings);
 
@@ -219,7 +240,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                             double delta = signalDb - referenceSignalDb;
                             if (delta < -1.0)
                             {
-                                _log.Warn($"Signal level dropped by {Math.Abs(delta):F2} dB from reference for {control}={val}");
+                                _log.Warn($"Signal level dropped by {Math.Abs(delta):F2} dB from reference for {control ?? "(unknown)"}={val}");
                             }
                         }
                     }
@@ -228,7 +249,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                         _log.Error(ex, "Failed while comparing signal to reference");
                     }
 
-                    results.Add(new SNRSweepResult(control, "Both", val, signalDb, noiseDb, snrDb));
+                    results.Add(new SNRSweepResult(controlKey, "Both", val, signalDb, noiseDb, snrDb));
                 }
                 catch (Exception ex)
                 {
@@ -237,17 +258,17 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
             }
 
             // pick best value for this control (highest SNR) and keep it
-            double bestSNR = double.NegativeInfinity; int bestVal = currentValues[control];
+            double bestSNR = double.NegativeInfinity; int bestVal = currentValues[controlKey];
             foreach (var r in results)
             {
-                if (!string.Equals(r.ControlName, control, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.Equals(r.ControlName, controlKey, StringComparison.OrdinalIgnoreCase)) continue;
                 if (double.IsNaN(r.SNRdB)) continue;
                 if (r.SNRdB > bestSNR) { bestSNR = r.SNRdB; bestVal = (int)r.Value; }
             }
-            currentValues[control] = bestVal;
+            currentValues[controlKey] = bestVal;
             // ensure device uses bestVal
-            try { soundDevice.SetSimpleElementValue(control, "Front Left", (nint)bestVal); } catch { }
-            try { soundDevice.SetSimpleElementValue(control, "Front Right", (nint)bestVal); } catch { }
+            try { soundDevice.SetSimpleElementValue(controlKey, "Front Left", (nint)bestVal); } catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Left to {bestVal}: {ex.Message}"); }
+            try { soundDevice.SetSimpleElementValue(controlKey, "Front Right", (nint)bestVal); } catch (Exception ex) { _log.Warn($"Failed to set {controlKey} Front Right to {bestVal}: {ex.Message}"); }
         }
 
 

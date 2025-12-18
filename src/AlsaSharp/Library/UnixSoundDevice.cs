@@ -128,7 +128,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         fixed (int* dirP = &dir)
         {
             int rv = InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP);
-            _log?.LogDebug("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
+            _log?.LogTrace("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
             ThrowErrorMessage(rv, ExceptionMessages.CanNotGetPeriodSize);
         }
 
@@ -140,7 +140,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested && wavStream.Read(readBuffer) != 0)
             {
                 nint rv = InteropAlsa.snd_pcm_writei(_playbackPcm, (IntPtr)buffer, frames);
-                _log?.LogDebug("[ALSA DEBUG] snd_pcm_writei -> {Rv}, frames requested={Frames}", rv, frames);
+                _log?.LogTrace("[ALSA DEBUG] snd_pcm_writei -> {Rv}, frames requested={Frames}", rv, frames);
                 ThrowErrorMessage(rv, ExceptionMessages.CanNotWriteToDevice);
             }
         }
@@ -152,7 +152,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         fixed (int* dirP = &dir)
         {
             int rv = InteropAlsa.snd_pcm_hw_params_get_period_size(@params, &frames, dirP);
-            _log?.LogDebug("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
+            _log?.LogTrace("[ALSA DEBUG] snd_pcm_hw_params_get_period_size -> {Rv}, frames={Frames}", rv, frames);
             ThrowErrorMessage(rv, ExceptionMessages.CanNotGetPeriodSize);
         }
 
@@ -164,7 +164,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             while (!_wasDisposed && !cancellationToken.IsCancellationRequested)
             {
                 nint rv = InteropAlsa.snd_pcm_readi(_recordingPcm, (IntPtr)buffer, frames);
-                _log?.LogDebug("[ALSA DEBUG] snd_pcm_readi -> {Rv}, frames requested={Frames}", rv, frames);
+                _log?.LogTrace("[ALSA DEBUG] snd_pcm_readi -> {Rv}, frames requested={Frames}", rv, frames);
                 if (rv < 0)
                 {
                     // try to recover from transient I/O errors (eg. -EIO)
@@ -290,7 +290,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                 {
                     if (pcm == _recordingPcm)
                     {
-                        _log?.LogInformation("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
+                        _log?.LogDebug("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
                             Settings.RecordingDeviceName, Settings.RecordingSampleRate, Settings.RecordingBitsPerSample, Settings.RecordingChannels);
                     }
                 }
@@ -298,7 +298,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
             }
             catch (Exception ex)
             {
-                _log?.LogDebug(ex, "[ALSA DEBUG] Could not read negotiated hw params");
+                _log?.LogError(ex, "[ALSA DEBUG] Could not read negotiated hw params");
             }
     }
 
@@ -620,7 +620,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
     {
         if (string.IsNullOrEmpty(stateFilePath) || !File.Exists(stateFilePath))
         {
-            _log?.LogInformation("[ALSA INFO] State file not found: {Path}", stateFilePath);
+            _log?.LogWarning("[ALSA INFO] State file not found: {Path}", stateFilePath);
             return;
         }
 
