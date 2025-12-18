@@ -12,7 +12,7 @@ namespace AlsaSharp.Library.Services
     public class SoundDeviceManager : ISoundDeviceManager
     {
         private readonly ILog<ISoundDeviceManager> _log;
-        private readonly Microsoft.Extensions.Logging.ILogger<SoundDeviceManager>? _logger;
+        private readonly ILogger<SoundDeviceManager>? _logger;
 
         /// <summary>
         /// Creates a new instance of the Card class.
@@ -21,7 +21,7 @@ namespace AlsaSharp.Library.Services
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
         /// <param name="logger">Optional Microsoft.Extensions.Logging logger.</param>
-        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name, Microsoft.Extensions.Logging.ILogger<SoundDeviceManager>? logger = null)
+        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name, ILogger<SoundDeviceManager>? logger = null)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _logger = logger;

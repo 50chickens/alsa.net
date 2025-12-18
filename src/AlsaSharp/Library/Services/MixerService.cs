@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using AlsaSharp.Core.Alsa;
 using AlsaSharp.Core.Native;
+using AlsaSharp.Library.Logging;
 
 namespace AlsaSharp.Library.Services
 {
@@ -9,13 +10,13 @@ namespace AlsaSharp.Library.Services
     /// </summary>
     public class MixerService
     {
-        private readonly Microsoft.Extensions.Logging.ILogger<MixerService>? _log;
+        private readonly ILog<MixerService>? _log;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MixerService"/> class.
         /// </summary>
         /// <param name="log">Optional logger for diagnostic messages.</param>
-        public MixerService(Microsoft.Extensions.Logging.ILogger<MixerService>? log = null)
+        public MixerService(ILog<MixerService>? log = null)
         {
             _log = log;
         }

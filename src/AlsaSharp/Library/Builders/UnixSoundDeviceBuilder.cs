@@ -3,6 +3,7 @@ using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Builders;
 
@@ -33,7 +34,7 @@ public class UnixSoundDeviceBuilder
         if (hintService == null)
             throw new InvalidOperationException("IHintService is not registered. Call AddUnixSoundDeviceBuilder() to register hint service before building devices.");
 
-        var log = services.GetService<AlsaSharp.Library.Logging.ILog<UnixSoundDeviceBuilder>>();
+        var log = services.GetService<ILog<UnixSoundDeviceBuilder>>();
 
         // Prepare measurement folder and timestamp if provided
         string? timestamp = null;
@@ -71,13 +72,13 @@ public class UnixSoundDeviceBuilder
                 soundDeviceSettings.BaselineFilePath = jsonPath;
                 try
                 {
-                    var jsonWriter = new AlsaSharp.Library.Logging.JsonWriter(jsonPath);
+                    var jsonWriter = new JsonWriter(jsonPath);
                     jsonWriter.Append(new { Device = (object?)null, Card = new { Id = soundDeviceSettings.CardId, Name = soundDeviceSettings.CardName, LongName = soundDeviceSettings.CardLongName, SampleRate = soundDeviceSettings.RecordingSampleRate, BitsPerSample = soundDeviceSettings.RecordingBitsPerSample }, Timestamp = DateTime.UtcNow });
                 }
                 catch { }
             }
 
-            var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<UnixSoundDevice>>();
+            var logger = services.GetService<ILogger<UnixSoundDevice>>();
             var soundDevice = new UnixSoundDevice(soundDeviceSettings, logger);
             // Log discovered device details here; runtime PCM negotiation produces authoritative params.
             try
@@ -95,7 +96,7 @@ public class UnixSoundDeviceBuilder
             try
             {
                 var summaryPath = Path.Combine(measurementFolder, $"baseline_summary_{timestamp}.json");
-                var summaryWriter = new AlsaSharp.Library.Logging.JsonWriter(summaryPath);
+                var summaryWriter = new JsonWriter(summaryPath);
                 summaryWriter.Append(new { Timestamp = DateTime.UtcNow, Devices = devicesMetadata });
                 log?.Info($"Wrote baseline summary for {devicesMetadata.Count} devices to {summaryPath}");
             }
