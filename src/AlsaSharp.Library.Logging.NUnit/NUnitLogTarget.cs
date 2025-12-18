@@ -1,4 +1,6 @@
 ﻿using NLog.Targets;
+using NUnit.Framework;
+
 namespace AlsaSharp.Tests.NUnit
 {
     public class NUnitLogTarget : TargetWithLayout
@@ -12,7 +14,7 @@ namespace AlsaSharp.Tests.NUnit
         {
             // render the layout and write to NUnit's progress output so test runners capture the output
             var text = this.Layout.Render(logEvent);
-            NUnit.Framework.TestContext.Progress.WriteLine(text);
+            TestContext.Progress.WriteLine(text);
         }
     }
 }

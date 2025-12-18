@@ -54,7 +54,7 @@ public class SoundDeviceSettings()
     public string? CardLongName { get; set; }
 
     /// <summary>
-    /// Card index (hw:<index>).
+    /// Card index (hw:index).
     /// </summary>
     public int? CardIndex { get; set; }
 

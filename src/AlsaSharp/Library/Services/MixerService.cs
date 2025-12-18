@@ -11,6 +11,10 @@ namespace AlsaSharp.Library.Services
     {
         private readonly Microsoft.Extensions.Logging.ILogger<MixerService>? _log;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MixerService"/> class.
+        /// </summary>
+        /// <param name="log">Optional logger for diagnostic messages.</param>
         public MixerService(Microsoft.Extensions.Logging.ILogger<MixerService>? log = null)
         {
             _log = log;
@@ -190,9 +194,9 @@ namespace AlsaSharp.Library.Services
 
         /// <summary>
         /// Attempts to read the current value of the named mixer control in a generic way.
-        /// For ENUMERATED controls returns type="enum" and value=<human-label>.
-        /// For integer volume controls returns type="integer" and value=<numeric(s)>.
-        /// For switch controls returns type="switch" and value=<0|1 or on|off>.
+        /// For ENUMERATED controls returns type="enum" and value with human-readable label.
+        /// For integer volume controls returns type="integer" and value with numeric value(s).
+        /// For switch controls returns type="switch" and value with 0, 1, on, or off.
         /// </summary>
         public bool TryGetElementValue(int card, string controlName, out string type, out string value)
         {

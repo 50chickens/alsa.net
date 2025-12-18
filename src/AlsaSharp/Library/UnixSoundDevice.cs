@@ -625,7 +625,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         }
 
         string[] lines = File.ReadAllLines(stateFilePath);
-        string currentName = null;
+        string? currentName = null;
         // simple parser: when we find a name '...' line, collect subsequent value lines until the next control or closing brace
         for (int i = 0; i < lines.Length; i++)
         {

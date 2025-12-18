@@ -20,6 +20,7 @@ namespace AlsaSharp.Library.Services
         /// <param name="log">Logger instance scoped to this type.</param>
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
+        /// <param name="logger">Optional Microsoft.Extensions.Logging logger.</param>
         public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name, Microsoft.Extensions.Logging.ILogger<SoundDeviceManager>? logger = null)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));

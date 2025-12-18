@@ -3,34 +3,81 @@ using System.Text;
 
 namespace AlsaSharp.Library;
 
+/// <summary>
+/// Represents the header structure of a WAV audio file.
+/// </summary>
 public struct WavHeader
 {
+    /// <summary>
+    /// Gets or sets the chunk ID (typically "RIFF").
+    /// </summary>
     public char[] ChunkId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the chunk size.
+    /// </summary>
     public uint ChunkSize { get; set; }
 
+    /// <summary>
+    /// Gets or sets the format (typically "WAVE").
+    /// </summary>
     public char[] Format { get; set; }
 
+    /// <summary>
+    /// Gets or sets the subchunk 1 ID (typically "fmt ").
+    /// </summary>
     public char[] Subchunk1Id { get; set; }
 
+    /// <summary>
+    /// Gets or sets the subchunk 1 size.
+    /// </summary>
     public uint Subchunk1Size { get; set; }
 
+    /// <summary>
+    /// Gets or sets the audio format (1 for PCM).
+    /// </summary>
     public ushort AudioFormat { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of channels.
+    /// </summary>
     public ushort NumChannels { get; set; }
 
+    /// <summary>
+    /// Gets or sets the sample rate in Hz.
+    /// </summary>
     public uint SampleRate { get; set; }
 
+    /// <summary>
+    /// Gets or sets the byte rate (sample rate × channels × bytes per sample).
+    /// </summary>
     public uint ByteRate { get; set; }
 
+    /// <summary>
+    /// Gets or sets the block align (channels × bytes per sample).
+    /// </summary>
     public ushort BlockAlign { get; set; }
 
+    /// <summary>
+    /// Gets or sets the bits per sample.
+    /// </summary>
     public ushort BitsPerSample { get; set; }
 
+    /// <summary>
+    /// Gets or sets the subchunk 2 ID (typically "data").
+    /// </summary>
     public char[] Subchunk2Id { get; set; }
 
+    /// <summary>
+    /// Gets or sets the subchunk 2 size.
+    /// </summary>
     public uint Subchunk2Size { get; set; }
 
+    /// <summary>
+    /// Writes the WAV header to the specified stream.
+    /// </summary>
+    /// <param name="wavStream">The stream to write to.</param>
+    /// <exception cref="WavFormatException">Thrown when unable to write header to stream.</exception>
     public void WriteToStream(Stream wavStream)
     {
         Span<byte> writeBuffer2 = stackalloc byte[2];
@@ -83,6 +130,13 @@ public struct WavHeader
         }
     }
 
+    /// <summary>
+    /// Builds a new WAV header with the specified audio parameters.
+    /// </summary>
+    /// <param name="sampleRate">The sample rate in Hz.</param>
+    /// <param name="channels">The number of audio channels.</param>
+    /// <param name="bitsPerSample">The bits per sample.</param>
+    /// <returns>A new WAV header with the specified parameters.</returns>
     public static WavHeader Build(uint sampleRate, ushort channels, ushort bitsPerSample)
     {
         return new WavHeader
@@ -103,6 +157,12 @@ public struct WavHeader
         };
     }
 
+    /// <summary>
+    /// Reads a WAV header from the specified stream.
+    /// </summary>
+    /// <param name="wavStream">The stream to read from.</param>
+    /// <returns>The WAV header read from the stream.</returns>
+    /// <exception cref="WavFormatException">Thrown when unable to read header from stream.</exception>
     public static WavHeader FromStream(Stream wavStream)
     {
         Span<byte> readBuffer2 = stackalloc byte[2];
