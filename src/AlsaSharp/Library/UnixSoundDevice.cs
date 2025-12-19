@@ -220,10 +220,65 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_any(pcm, @params), ExceptionMessages.CanNotFillParameters);
         ThrowErrorMessage(InteropAlsa.snd_pcm_hw_params_set_access(pcm, @params, snd_pcm_access_t.SND_PCM_ACCESS_RW_INTERLEAVED), ExceptionMessages.CanNotSetAccessMode);
 
-        // Do not force format, channels, or sample rate here — let ALSA use the card defaults.
-        // The previous implementation attempted to set format/channels/rate based on the WAV header
-        // which can fail for devices that do not support those exact parameters. Per request,
-        // we avoid setting them and allow ALSA to use its defaults.
+        // Use probed device capabilities (if available) to request a compatible format/rate/channels
+        // similar to how arecord/aplay negotiates hw params. This helps avoid ALSA falling back to
+        // undesired low rates (eg. 8000 Hz) when higher-quality formats are available.
+        try
+        {
+            // prefer 16-bit if the device supports it, otherwise use the highest supported bits
+            ushort targetBits = Settings.SupportedSampleBits?.Contains((ushort)16) == true ? (ushort)16 : Settings.SupportedSampleBits?.LastOrDefault() ?? Settings.RecordingBitsPerSample;
+            if (targetBits == 0) targetBits = 16;
+
+            Core.Native.snd_pcm_format_t targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN;
+            switch (targetBits)
+            {
+                case 8: targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_U8; break;
+                case 16: targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE; break;
+                case 24: targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE; break;
+                case 32: targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE; break;
+                default: targetFmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE; break;
+            }
+
+            if (targetFmt != Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN)
+            {
+                int setf = InteropAlsa.snd_pcm_hw_params_set_format(pcm, @params, targetFmt);
+                if (setf == 0)
+                {
+                    // update bits mapping
+                    switch (targetFmt)
+                    {
+                        case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_U8: header.BitsPerSample = 8; break;
+                        case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE: header.BitsPerSample = 16; break;
+                        case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE:
+                        case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE: header.BitsPerSample = 24; break;
+                        case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE: header.BitsPerSample = 32; break;
+                    }
+                }
+            }
+
+            // set channels
+            uint wantCh = Settings.RecordingChannels != 0 ? Settings.RecordingChannels : (Settings.SupportedChannels?.Any() == true ? Settings.SupportedChannels.First() : 2u);
+            int sch = InteropAlsa.snd_pcm_hw_params_set_channels(pcm, @params, wantCh);
+            if (sch == 0)
+            {
+                header.NumChannels = (ushort)wantCh;
+            }
+
+            // set rate near preferred or try 48000 first
+            uint wantRate = Settings.RecordingSampleRate != 0 ? Settings.RecordingSampleRate : (Settings.SupportedSampleRates?.Contains(48000) == true ? 48000u : (Settings.SupportedSampleRates?.LastOrDefault() ?? 48000u));
+            uint rr = wantRate;
+            int rdir = dir;
+            int rrRv = InteropAlsa.snd_pcm_hw_params_set_rate_near(pcm, @params, &rr, &rdir);
+            if (rrRv == 0 && rr != 0)
+            {
+                header.SampleRate = rr;
+                dir = rdir;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "[ALSA DEBUG] Device probing-based parameter setting failed");
+        }
 
         // Attempt to set hardware params; if we get a transient I/O error (-EIO)
         // try to recover the PCM and retry once before failing.
@@ -251,15 +306,15 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         {
             Core.Native.snd_pcm_format_t fmt = Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_UNKNOWN;
             uint rate = 0;
-            int rdir = 0;
+            int rdir2 = 0;
             uint channels = 0;
             // Attempt to read format/rate/channels; failures should not be fatal
             _ = InteropAlsa.snd_pcm_hw_params_get_format(@params, &fmt);
-            _ = InteropAlsa.snd_pcm_hw_params_get_rate(@params, &rate, &rdir);
+            _ = InteropAlsa.snd_pcm_hw_params_get_rate(@params, &rate, &rdir2);
             _ = InteropAlsa.snd_pcm_hw_params_get_channels(@params, &channels);
 
             // Map ALSA format to bits per sample when possible
-            ushort bits = Settings.RecordingBitsPerSample;
+            ushort bits = header.BitsPerSample;
             switch (fmt)
             {
                 case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE:
@@ -278,28 +333,21 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                     break;
                 case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE:
                 case Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_BE:
-                    // leave bits as-is but callers may need to support float
-                    break;
-                default:
+                    bits = 32;
                     break;
             }
 
-            if (rate != 0)
-                Settings.RecordingSampleRate = rate;
-            if (channels != 0)
-                Settings.RecordingChannels = (ushort)channels;
-            Settings.RecordingBitsPerSample = bits;
-            // If this initialization is for the recording PCM, log the negotiated
-            // audio capture parameters so callers can see the actual runtime values.
-            try
-            {
-                if (pcm == _recordingPcm)
-                {
-                    _log?.LogDebug("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
-                        Settings.RecordingDeviceName, Settings.RecordingSampleRate, Settings.RecordingBitsPerSample, Settings.RecordingChannels);
-                }
-            }
-            catch { /* best-effort logging only */ }
+            if (rate != 0) header.SampleRate = rate;
+            if (channels != 0) header.NumChannels = (ushort)channels;
+            header.BitsPerSample = bits;
+
+            // Sync back to settings for consistency
+            Settings.RecordingSampleRate = header.SampleRate;
+            Settings.RecordingChannels = header.NumChannels;
+            Settings.RecordingBitsPerSample = header.BitsPerSample;
+
+            _log?.LogInformation("[ALSA INFO] Recording opened: device={Device} rate={Rate} bits={Bits} channels={Channels}",
+                Settings.RecordingDeviceName, header.SampleRate, header.BitsPerSample, header.NumChannels);
         }
         catch (Exception ex)
         {
@@ -642,7 +690,9 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
         // simple parser: when we find a name '...' line, collect subsequent value lines until the next control or closing brace
         for (int i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Trim();
+            var line = lines[i].Trim(); //replace line with a regex to remove leading/trailing whitespace
+            if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
+                continue;
             if (line.StartsWith("name "))
             {
                 // name 'Mic 1 Volume'
@@ -744,8 +794,13 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                             else
                             {
                                 try
-                                { SetSimpleElementValue(currentName, string.Empty, enumIndex); }
-                                catch (Exception ex) { _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name} -> {Value}", currentName, enumIndex); }
+                                { 
+                                    SetSimpleElementValue(currentName, string.Empty, enumIndex); 
+                                }
+                                catch (Exception ex) 
+                                { 
+                                    _log?.LogError(ex, "[ALSA ERROR] RestoreState(enum): failed to set {Name} -> {Value}", currentName, enumIndex); 
+                                }
                             }
                         }
                         else

@@ -91,13 +91,9 @@ public class SNRReductionWorker : BackgroundService
 
         foreach (var device in _soundDevices)
         {
-            if (device == null)
-                continue;
             var settings = device.Settings;
-            if (settings == null)
-                continue;
-
-            // Prefer baseline file path created by the builder; fallback to worker naming if absent
+            
+            
             var jsonPath = settings.BaselineFilePath;
             if (string.IsNullOrWhiteSpace(jsonPath))
             {
@@ -118,32 +114,7 @@ public class SNRReductionWorker : BackgroundService
                 _log.Error(ex, "Failed to run baseline");
             }
         }
-
-        // If AutoSweep is enabled, run a short quick sweep to verify end-to-end behavior.
-        // if (_snrReductionServiceOptions.AutoSweep)
-        // {
-        //     _log.Info("AutoSweep enabled - running a short control sweep test...");
-        //     // quick small sweep around 0 to test that changing controls affects measured dBFS
-        //     int controlMin = -4096;
-        //     int controlMax = 4096;
-        //     int controlStep = 4096;
-        //     TimeSpan sweepMeasureDuration = TimeSpan.FromSeconds(1);
-        //     int sweepMeasurementCount = 1;
-
-        //     try
-        //     {
-        //         var sweepResults = _sweepService.SweepControl(_soundDevice, string.Empty, controlMin, controlMax, controlStep, sweepMeasureDuration, sweepMeasurementCount);
-        //         _log.Info(JsonSerializer.Serialize(new { Sweep = sweepResults }, optionsJson));
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _log.Error(ex, "AutoSweep failed");
-        //     }
-        // }
-
-        // Signal the host to stop.
         _lifetime.StopApplication();
-
         await Task.CompletedTask;
     }
 

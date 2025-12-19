@@ -261,7 +261,18 @@ namespace AlsaSharp.Library.Services
                 return null;
 
             var control = new Control(cardIndex);
-            string longName = GetCardLongName(cardIndex);
+            string longName = string.Empty;
+            try
+            {
+                if (cardIndex >= 0)
+                    longName = GetCardLongName(cardIndex);
+            }
+            catch (Exception ex)
+            {
+                // best-effort: log and continue with empty longName
+                _log?.LogDebug(ex, "HintService: failed to get longname for card {CardIndex}", cardIndex);
+                longName = string.Empty;
+            }
             return new Hint(name ?? string.Empty, desc ?? string.Empty, ioid ?? string.Empty, cardName, cardIndex, deviceIndex, iface, control, longName);
         }
 

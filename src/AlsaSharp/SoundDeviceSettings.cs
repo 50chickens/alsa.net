@@ -39,6 +39,26 @@ public class SoundDeviceSettings()
     public ushort RecordingBitsPerSample { get; set; } = 16;
 
     /// <summary>
+    /// List of supported sample rates (Hz) discovered by probing the device.
+    /// </summary>
+    public List<uint> SupportedSampleRates { get; set; } = new List<uint>();
+
+    /// <summary>
+    /// List of supported sample bits (bit depth) discovered by probing the device.
+    /// </summary>
+    public List<ushort> SupportedSampleBits { get; set; } = new List<ushort>();
+
+    /// <summary>
+    /// List of supported channel counts discovered by probing the device.
+    /// </summary>
+    public List<ushort> SupportedChannels { get; set; } = new List<ushort>();
+
+    /// <summary>
+    /// Supported format combinations (rate, bits, channels) discovered by probing.
+    /// </summary>
+    public List<(uint Rate, ushort Bits, ushort Channels)> SupportedCombinations { get; set; } = new List<(uint, ushort, ushort)>();
+
+    /// <summary>
     /// Card identifier (eg. "Plus").
     /// </summary>
     public string? CardId { get; set; }

@@ -49,6 +49,9 @@ public class UnixSoundDeviceBuilder
 
         var devicesMetadata = new List<object>();
         var list = new List<ISoundDevice>();
+        var proberLog = services.GetService<ILog<DeviceProber>>();
+        var prober = new DeviceProber(proberLog);
+
         foreach (var card in hintService.CardInfos)
         {
             var name = card.Id ?? card.Name ?? $"card{card.Index}";
@@ -62,8 +65,17 @@ public class UnixSoundDeviceBuilder
                 CardLongName = card.LongName,
                 CardIndex = card.Index
             };
-            // Do not probe ALSA here; runtime PCM initialization negotiates formats and updates settings.
-            // Probing at build time was redundant and produced misleading defaults.
+
+            // Probe device capabilities at build time to populate supported formats, rates and channels.
+            try
+            {
+                prober.Probe(soundDeviceSettings);
+            }
+            catch (Exception ex)
+            {
+                log?.Warn($"Failed to probe device {soundDeviceSettings.RecordingDeviceName}: {ex.Message}");
+            }
+
             // If measurement folder provided, compute per-device baseline file path and write header
             if (!string.IsNullOrWhiteSpace(measurementFolder) && timestamp != null)
             {
