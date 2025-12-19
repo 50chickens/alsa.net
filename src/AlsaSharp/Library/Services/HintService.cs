@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using AlsaSharp.Core.Alsa;
 using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Logging;
-using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services
 {

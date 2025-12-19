@@ -1,5 +1,7 @@
+using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Extensions;
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Library.Services;
 using Example.SNRReduction.Extensions;
 using Example.SNRReduction.Logging;
 using Example.SNRReduction.Models;
@@ -36,18 +38,17 @@ internal class Program
         builder.Services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
         builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
-
+        builder.Services.AddSingleton<AudioCardProberService>();
+        builder.Services.AddSingleton<IHintService, HintService>();
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
 
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         
-        builder.Services.AddUnixSoundDeviceBuilder();
-                
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Logging.ClearProviders();
-
+        builder.Services.AddSNRReductionWorker();
         builder.Logging.SetMinimumLevel(LogLevel.Information);
         
         builder.Logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.Warning);
@@ -61,8 +62,8 @@ internal class Program
             var snrOptions = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
 
         });
-
-        builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
+        
+       builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();
         builder.Services.AddHostedService<SNRReductionWorker>();
 
         var host = builder.Build();
@@ -86,4 +87,5 @@ public static class ServiceExtensions
         services.AddSingleton<SNRReductionWorker>();
         return services;
     }
+    
 }

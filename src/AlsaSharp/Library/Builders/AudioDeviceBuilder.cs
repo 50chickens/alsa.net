@@ -1,32 +1,24 @@
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AlsaSharp.Library.Builders;
 
 /// <summary>
 /// Connect your sound device configuration to a virtual interface.
 /// </summary>
-public class UnixSoundDeviceBuilder
+public class AudioDeviceBuilder(ILog<AudioDeviceBuilder> log, AudioCardProberService audioCardProberService, HintService hintService) : IAudioDeviceBuilder
 {
-    
-    /// <summary>
-    /// Build sound device instances and optionally write baseline summary and per-device header JSON files
-    /// into the provided measurement folder. When measurementFolder is null no files are written.
-    /// </summary>
-    public static IEnumerable<ISoundDevice> Build(IServiceProvider services)
+    private readonly ILog<AudioDeviceBuilder> _log = log;
+    private readonly AudioCardProberService _audioCardProberService = audioCardProberService;
+    private HintService _hintService = hintService;
+    public IEnumerable<ISoundDevice> BuildAudioDevices()
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
-
-        var hintService = services.GetService<IHintService>();
-        var log = services.GetService<ILog<UnixSoundDeviceBuilder>>();
-
+        
         var list = new List<ISoundDevice>();
-        var audioCardProbeService = services.GetService<AudioCardProberService>();
-
-        foreach (var card in hintService.CardInfos)
+        
+        foreach (var card in _hintService.CardInfos)
         {
+            _log.Info($"Found audio card: index={card.Index} id={card.Id} name={card.Name} longname={card.LongName}");
             var name = card.Id ?? card.Name ?? $"card{card.Index}";
             var soundDeviceSettings = new SoundDeviceSettings
             {
@@ -36,23 +28,25 @@ public class UnixSoundDeviceBuilder
                 CardId = card.Id,
                 CardName = card.Name,
                 CardLongName = card.LongName,
-                CardIndex = card.Index
+                CardIndex = card.Index,
+                
             };
 
             try
             {
-                var supportedDeviceSettings = audioCardProbeService.Probe(soundDeviceSettings);
+                _log.Info($"Probing device {soundDeviceSettings.RecordingDeviceName}...");
+                soundDeviceSettings = _audioCardProberService.Probe(soundDeviceSettings);
             }
             catch (Exception ex)
             {
                 log.Warn($"Failed to probe device {soundDeviceSettings.RecordingDeviceName}: {ex.Message}");
             }
 
-            var soundDevice = services.GetService<UnixSoundDevice>();
-            
-            list.Add(soundDevice);
+            list.Add(new UnixSoundDevice(soundDeviceSettings));
             log.Info($"Discovered device: id={soundDeviceSettings.CardId} name={soundDeviceSettings.CardName} longname={soundDeviceSettings.CardLongName} recording={soundDeviceSettings.RecordingDeviceName} (runtime params negotiated at open)");
         }
         return list;
     }
+
+    
 }

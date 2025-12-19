@@ -123,7 +123,7 @@ namespace AlsaSharp.Library.Services
             settings.SupportedSampleBits = supportedBits.OrderBy(x => x).ToList();
             settings.SupportedSampleRates = supportedRates.OrderBy(x => x).ToList();
             settings.SupportedChannels = supportedChannels.OrderBy(x => x).ToList();
-            settings.SupportedCombinations = supportedCombinations.OrderBy(t => t.Item1).ThenBy(t => t.Item2).ThenBy(t => t.Item3).Select(t => (t.Item1, t.Item2, t.Item3)).ToList();
+            settings.SupportedSettings = supportedCombinations.OrderBy(t => t.Item1).ThenBy(t => t.Item2).ThenBy(t => t.Item3).Select(t => (t.Item1, t.Item2, t.Item3)).ToList();
 
             return settings;
         }

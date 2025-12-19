@@ -56,7 +56,7 @@ public class SoundDeviceSettings()
     /// <summary>
     /// Supported format combinations (rate, bits, channels) discovered by probing.
     /// </summary>
-    public List<(uint Rate, ushort Bits, ushort Channels)> SupportedCombinations { get; set; } = new List<(uint, ushort, ushort)>();
+    public List<(uint Rate, ushort Bits, ushort Channels)> SupportedSettings { get; set; } = new List<(uint, ushort, ushort)>();
 
     /// <summary>
     /// Card identifier (eg. "Plus").
