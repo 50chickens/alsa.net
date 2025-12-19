@@ -5,11 +5,10 @@ using Example.SNRReduction.Models;
 
 namespace Example.SNRReduction.Services;
 
-public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, ControlSweepOptions controlSweepOptions, IAudioLevelMeterRecorderService audioLevelMeterRecorderService) : IControlSweepService
+public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, ControlSweepOptions controlSweepOptions) : IControlSweepService
 {
     private readonly ILog<SignalNoiseRatioOptimizer> _log = log ?? throw new ArgumentNullException(nameof(log));
     private ControlSweepOptions _controlSweepOptions = controlSweepOptions ?? new ControlSweepOptions(new List<AlsaControl>());
-    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
 
     // small no-op logger implementation used when creating helper tools
 
@@ -22,7 +21,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
         };
     }
 
-    public List<SNRSweepResult> SweepControl(ISoundDevice soundDevice, string mixerElementName, int controlMin, int controlMax, int controlStep, TimeSpan measurementDuration, int measurementCount)
+    public List<SNRSweepResult> SweepControl(ISoundDevice soundDevice, string mixerElementName, int controlMin, int controlMax, int controlStep, TimeSpan measurementDuration, int measurementCount, IAudioLevelMeterRecorderService? recorder = null, Example.SNRReduction.Services.IAudioInterfaceLevelMeter? meter = null)
     {
         var results = new List<SNRSweepResult>();
         if (soundDevice == null)
@@ -127,7 +126,8 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
         {
             var refTone = GenerateToneWav(sampleRate, channels, bits, toneFreq, measureSeconds, 0.5);
             List<Example.SNRReduction.Models.AudioMeterLevelReading> refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
-            var refTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, "ReferenceSignal"));
+            // If a recorder is provided by the caller it can be used for reference measurement; otherwise
+            // we emit the reference tone without recording.
             try
             {
                 using var msRef = new MemoryStream(refTone);
@@ -138,7 +138,7 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                 _log.Error(ex, "Reference signal play failed");
             }
             try
-            { refReadings = refTask.Result; }
+            { refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
             catch { refReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>(); }
             referenceSignalDb = AvgDbfs(refReadings);
             _log.Info($"Reference signal level: {referenceSignalDb:F2} dBFS");
@@ -201,15 +201,18 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
 
                     // measure noise (no tone)
                     List<AudioMeterLevelReading> noiseReadings = new List<AudioMeterLevelReading>();
-                    var noiseTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Noise {control ?? "(unknown)"}={val}"));
-                    try
+                    if (recorder != null && meter != null)
                     {
-                        noiseReadings = noiseTask.Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Warn($"Noise measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
-                        noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                        var noiseTask = System.Threading.Tasks.Task.Run(() => recorder.GetAudioMeterLevelReadings(meter, measurementDuration, measurementCount, $"Noise {control ?? "(unknown)"}={val}"));
+                        try
+                        {
+                            noiseReadings = noiseTask.Result;
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Warn($"Noise measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                            noiseReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                        }
                     }
 
                     double noiseDb = AvgDbfs(noiseReadings);
@@ -217,25 +220,28 @@ public class SignalNoiseRatioOptimizer(ILog<SignalNoiseRatioOptimizer> log, Cont
                     // generate tone and play while recording
                     var tone = GenerateToneWav(sampleRate, channels, bits, toneFreq, measureSeconds, 0.5);
                     List<Example.SNRReduction.Models.AudioMeterLevelReading> sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
-                    var recordTask = System.Threading.Tasks.Task.Run(() => _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(measurementDuration, measurementCount, $"Signal {control ?? "(unknown)"}={val}"));
-                    try
+                    if (recorder != null && meter != null)
                     {
-                        // play tone (blocking until done)
-                        using var msTone = new MemoryStream(tone);
-                        soundDevice.Play(msTone, System.Threading.CancellationToken.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Warn($"Tone play failed for {control ?? "(unknown)"}={val}: {ex.Message}");
-                    }
-                    try
-                    {
-                        sigReadings = recordTask.Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Warn($"Signal measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
-                        sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                        var recordTask = System.Threading.Tasks.Task.Run(() => recorder.GetAudioMeterLevelReadings(meter, measurementDuration, measurementCount, $"Signal {control ?? "(unknown)"}={val}"));
+                        try
+                        {
+                            // play tone (blocking until done)
+                            using var msTone = new MemoryStream(tone);
+                            soundDevice.Play(msTone, System.Threading.CancellationToken.None);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Warn($"Tone play failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                        }
+                        try
+                        {
+                            sigReadings = recordTask.Result;
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Warn($"Signal measurement task failed for {control ?? "(unknown)"}={val}: {ex.Message}");
+                            sigReadings = new List<Example.SNRReduction.Models.AudioMeterLevelReading>();
+                        }
                     }
 
                     double signalDb = AvgDbfs(sigReadings);

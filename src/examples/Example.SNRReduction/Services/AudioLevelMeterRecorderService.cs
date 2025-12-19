@@ -4,14 +4,13 @@ using Example.SNRReduction.Models;
 
 namespace Example.SNRReduction.Services;
 
-public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, IAudioInterfaceLevelMeter audioInterfaceLevelMeter, AudioLevelMeterRecorderServiceOptions options) : IAudioLevelMeterRecorderService
+public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, AudioLevelMeterRecorderServiceOptions options) : IAudioLevelMeterRecorderService
 {
     private readonly ILog<AudioLevelMeterRecorderService> _log = log;
     private readonly AudioLevelMeterRecorderServiceOptions _options = options;
-    private readonly IAudioInterfaceLevelMeter _audioInterfaceLevelMeter = audioInterfaceLevelMeter;
 
 
-    public List<AudioMeterLevelReading> GetAudioMeterLevelReadings(TimeSpan measurementDuration, int measurementCount, string resultFileName)
+    public List<AudioMeterLevelReading> GetAudioMeterLevelReadings(Example.SNRReduction.Services.IAudioInterfaceLevelMeter meter, TimeSpan measurementDuration, int measurementCount, string resultFileName)
     {
         if (measurementDuration <= TimeSpan.Zero)
             throw new ArgumentException("measureFor must be > 0", nameof(measurementDuration));
@@ -22,7 +21,7 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
         for (int i = 0; i < measurementCount; i++)
         {
             _log.Trace($"Measurement {i + 1}/{measurementCount} ({measurementDuration.TotalSeconds} seconds)");
-            AudioMeterLevelReading audioMeterLevelReading = GetAudioMeterLevelReading(measurementDuration);
+            AudioMeterLevelReading audioMeterLevelReading = GetAudioMeterLevelReading(meter, measurementDuration);
             _log.Info($"Result: {audioMeterLevelReading}. Completed {i + 1}/{measurementCount} ({measurementDuration.TotalSeconds} seconds).");
             JsonWriter jsonWriter = new JsonWriter(resultFileName);
             jsonWriter.Append(audioMeterLevelReading);
@@ -31,9 +30,9 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
         }
         return _audioLevelReadings;
     }
-    public AudioMeterLevelReading GetAudioMeterLevelReading(TimeSpan measurementDuration)
+    public AudioMeterLevelReading GetAudioMeterLevelReading(Example.SNRReduction.Services.IAudioInterfaceLevelMeter meter, TimeSpan measurementDuration)
     {
-        var (channelDbfs, channelRms) = _audioInterfaceLevelMeter.MeasureLevels((int)measurementDuration.TotalMilliseconds);
+        var (channelDbfs, channelRms) = meter.MeasureLevels((int)measurementDuration.TotalMilliseconds);
         AudioMeterLevelReading audioLevelReading = new()
         {
             TimestampUtc = DateTime.UtcNow,
@@ -42,5 +41,13 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
         };
 
         return audioLevelReading;
+    }
+    public List<AudioMeterLevelReading> GetAudioMeterLevelReadings(TimeSpan measurementDuration, int measurementCount, string resultFileName)
+    {
+        throw new NotSupportedException("Use GetAudioMeterLevelReadings(IAudioInterfaceLevelMeter, ...) with a per-device meter instance.");
+    }
+    public AudioMeterLevelReading GetAudioMeterLevelReading(TimeSpan measurementDuration)
+    {
+        throw new NotSupportedException("Use GetAudioMeterLevelReading(IAudioInterfaceLevelMeter, ...) with a per-device meter instance.");
     }
 }

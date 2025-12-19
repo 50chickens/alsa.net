@@ -91,9 +91,12 @@ public class SNRReductionWorker : BackgroundService
 
         foreach (var device in _soundDevices)
         {
+            if (device == null)
+                continue;
             var settings = device.Settings;
-            
-            
+            if (settings == null)
+                continue;
+
             var jsonPath = settings.BaselineFilePath;
             if (string.IsNullOrWhiteSpace(jsonPath))
             {
@@ -107,33 +110,54 @@ public class SNRReductionWorker : BackgroundService
 
             try
             {
-                MeasureAudioLevelsAndSaveMeasurements(device, jsonPath);
+                if (_snrReductionServiceOptions.MeasureAudioLevels)
+                {
+                    // Create per-device meter and obtain recorder from DI; recorder methods accept a per-device meter.
+                    var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
+                    var meter = new AudioInterfaceLevelMeter(device, meterLog);
+                    var recorder = _services.GetRequiredService<IAudioLevelMeterRecorderService>();
+
+                    var results = recorder.GetAudioMeterLevelReadings(meter, _measureDuration, _measurementCount, jsonPath);
+                    _log.Info($"Baseline completed and written to {jsonPath}");
+                }
+                else
+                {
+                    _log.Info("MeasureAudioLevels is false; skipping audio level baseline recording.");
+                }
             }
             catch (Exception ex)
             {
                 _log.Error(ex, "Failed to run baseline");
             }
-        }
-        _lifetime.StopApplication();
-        await Task.CompletedTask;
-    }
 
-    private void MeasureAudioLevelsAndSaveMeasurements(ISoundDevice device, string jsonPath)
-    {
-        if (_snrReductionServiceOptions.MeasureAudioLevels)
-        {
-            // Create per-device meter and recorder instances only when requested
-            var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
-            var recorderLog = _services.GetRequiredService<ILog<AudioLevelMeterRecorderService>>();
-            var meter = new AudioInterfaceLevelMeter(device, meterLog);
-            var recorder = new AudioLevelMeterRecorderService(recorderLog, meter, _recorderOptions);
+            if (_snrReductionServiceOptions.AutoSweep)
+            {
+                try
+                {
+                    // create per-device meter and recorder and pass them into the sweep so measurements
+                    // are performed using the actual device-specific meter instance.
+                    var meterLog = _services.GetRequiredService<ILog<AudioInterfaceLevelMeter>>();
+                    var meter = new AudioInterfaceLevelMeter(device, meterLog);
+                    var recorder = _services.GetRequiredService<IAudioLevelMeterRecorderService>();
+                    int controlMin = -4096;
+                    int controlMax = 4096;
+                    int controlStep = 4096;
+                    TimeSpan sweepMeasureDuration = TimeSpan.FromSeconds(1);
+                    int sweepMeasurementCount = 1;
 
-            var results = recorder.GetAudioMeterLevelReadings(_measureDuration, _measurementCount, jsonPath);
-            _log.Info($"Baseline completed and written to {jsonPath}");
-        }
-        else
-        {
-            _log.Info("MeasureAudioLevels is false; skipping audio level baseline recording.");
+                    var sweepResults = _sweepService.SweepControl(device, string.Empty, controlMin, controlMax, controlStep, sweepMeasureDuration, sweepMeasurementCount, recorder, meter);
+                    var optionsJson = new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+                    };
+                    _log.Info($"Sweep results for {settings.CardId}: {JsonSerializer.Serialize(new { Sweep = sweepResults }, optionsJson)}");
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(ex, "AutoSweep failed for device");
+                }
+            }
         }
     }
 

@@ -30,12 +30,20 @@ public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService con
 
     private List<AudioMeterLevelReading> GetBaseLineReadings()
     {
-        var measurementResults = _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(TimeSpan.FromSeconds(3), 10, "Baseline recording");
-        measurementResults.ForEach(r =>
+        try
         {
-            var dbfs = r.ChannelDbfs != null && r.ChannelDbfs.Count > 0 ? string.Join(", ", r.ChannelDbfs.Select((v, i) => $"Ch{i + 1}:{v:F2}dBFS")) : "no-channels";
-            _log.Info($"Timestamp: {r.TimestampUtc}, {dbfs}");
-        });
-        return measurementResults;
+            var measurementResults = _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(TimeSpan.FromSeconds(3), 10, "Baseline recording");
+            measurementResults.ForEach(r =>
+            {
+                var dbfs = r.ChannelDbfs != null && r.ChannelDbfs.Count > 0 ? string.Join(", ", r.ChannelDbfs.Select((v, i) => $"Ch{i + 1}:{v:F2}dBFS")) : "no-channels";
+                _log.Info($"Timestamp: {r.TimestampUtc}, {dbfs}");
+            });
+            return measurementResults;
+        }
+        catch (NotSupportedException)
+        {
+            _log.Warn("Baseline measurement is not supported without a device-specific meter. Provide a per-device meter to the recorder.");
+            return new List<AudioMeterLevelReading>();
+        }
     }
 }
