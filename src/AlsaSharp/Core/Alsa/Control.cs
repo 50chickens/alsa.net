@@ -46,7 +46,7 @@ public class Control : IControl
             while (elem != IntPtr.Zero)
             {
                 IntPtr nptr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                string elemName = Marshal.PtrToStringUTF8(nptr) ?? string.Empty;
+                string elemName = Marshal.PtrToStringUTF8(nptr) ;
                 if (!string.IsNullOrEmpty(elemName))
                     results.Add(elemName);
                 elem = InteropAlsa.snd_mixer_elem_next(elem);
@@ -162,7 +162,7 @@ public class Control : IControl
         while (elem != IntPtr.Zero)
         {
             IntPtr nptr = InteropAlsa.snd_mixer_selem_get_name(elem);
-            string name = Marshal.PtrToStringUTF8(nptr) ?? string.Empty;
+            string name = Marshal.PtrToStringUTF8(nptr) ;
             if (string.Equals(name, elementName, StringComparison.OrdinalIgnoreCase))
                 return elem;
             elem = InteropAlsa.snd_mixer_elem_next(elem);

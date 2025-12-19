@@ -1,3 +1,4 @@
+using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,8 +9,8 @@ namespace AlsaSharp.Library.Extensions
     {
         public static IHintService Build(IServiceProvider services)
         {
-            var logger = services.GetService<ILogger<HintService>>();
-            return new HintService(logger);
+            var log= services.GetService<ILog<HintService>>();
+            return new HintService(log);
         }
     }
 }

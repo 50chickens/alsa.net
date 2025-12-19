@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using AlsaSharp.Core.Alsa;
 using AlsaSharp.Core.Native;
+using AlsaSharp.Library.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services
@@ -14,12 +15,12 @@ namespace AlsaSharp.Library.Services
     {
         private List<Hint> _hints;
         private List<CardInfo> _cards;
-        private readonly ILogger<HintService>? _log;
+        private readonly ILog<HintService> _log;
 
         /// <summary>
         /// Creates a new AlsaHintService.
         /// </summary>
-        public HintService(ILogger<HintService>? log)
+        public HintService(ILog<HintService> log)
         {
             _hints = GetAlsaHints();
             _cards = GetAlsaCardInfos();
@@ -56,7 +57,7 @@ namespace AlsaSharp.Library.Services
                 // build pcm streams
                 var pcmStreams = new List<PcmStreamDto>();
                 // group entries by Stream value
-                var groups = c.PcmEntries.GroupBy(e => e.Stream ?? string.Empty);
+                var groups = c.PcmEntries.GroupBy(e => e.Stream );
                 foreach (var g in groups)
                 {
                     var devices = new List<PcmDeviceDto>();
@@ -116,7 +117,7 @@ namespace AlsaSharp.Library.Services
             }
             catch (Exception ex)
             {
-                _log?.LogDebug(ex, "GetControlsCountSafe failed for card {CardIndex}", cardIndex);
+                _log.Error(ex, $"GetControlsCountSafe failed for card {cardIndex}.");
                 return 0;
             }
         }
@@ -156,7 +157,7 @@ namespace AlsaSharp.Library.Services
             catch (Exception ex)
             {
                 // log and return whatever we collected (possibly empty)
-                _log?.LogDebug(ex, "GetControlElementNamesSafe failed for card {CardIndex}", cardIndex);
+                _log.Error(ex, $"GetControlElementNamesSafe failed for card {cardIndex}");
             }
             return results;
         }
@@ -175,9 +176,9 @@ namespace AlsaSharp.Library.Services
                     h.CardId,
                     h.CardIndex,
                     h.DeviceIndex >= 0 ? h.DeviceIndex : (int?)null,
-                    h.Description ?? string.Empty,
-                    h.LongName ?? string.Empty,
-                    h.IOID ?? string.Empty,
+                    h.Description ,
+                    h.LongName ,
+                    h.IOID ,
                     h.InterfaceType.ToString(),
                     h.CardIndex
                 ));
@@ -246,7 +247,7 @@ namespace AlsaSharp.Library.Services
         private Hint? BuildHintFromPointer(IntPtr hintPtr)
         {
             var name = GetHintValue(hintPtr, "NAME");
-            var desc = GetHintValue(hintPtr, "DESC");
+            var description = GetHintValue(hintPtr, "DESC");
             var ioid = GetHintValue(hintPtr, "IOID");
 
             if (!IsNameValid(name))
@@ -270,10 +271,10 @@ namespace AlsaSharp.Library.Services
             catch (Exception ex)
             {
                 // best-effort: log and continue with empty longName
-                _log?.LogDebug(ex, "HintService: failed to get longname for card {CardIndex}", cardIndex);
+                _log.Error(ex, $"HintService: failed to get longname for card {cardIndex}.");
                 longName = string.Empty;
             }
-            return new Hint(name ?? string.Empty, desc ?? string.Empty, ioid ?? string.Empty, cardName, cardIndex, deviceIndex, iface, control, longName);
+            return new Hint(name, description, ioid, cardName, cardIndex, deviceIndex, iface, control, longName);
         }
 
         private static bool IsNameValid(string? name) => !string.IsNullOrWhiteSpace(name) && !name!.Equals("null", StringComparison.OrdinalIgnoreCase);

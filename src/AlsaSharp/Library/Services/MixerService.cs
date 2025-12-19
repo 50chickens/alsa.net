@@ -123,8 +123,8 @@ namespace AlsaSharp.Library.Services
                     int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)ei, (UIntPtr)sb.Capacity, sb);
                     if (rc >= 0)
                     {
-                        var itemName = sb.ToString() ?? string.Empty;
-                        var candidate = itemLabel?.Trim().Trim('\'') ?? string.Empty;
+                        var itemName = sb.ToString() ;
+                        var candidate = itemLabel?.Trim().Trim('\'') ;
                         if (string.Equals(itemName.Trim('\''), candidate, StringComparison.OrdinalIgnoreCase) || string.Equals(itemName, candidate, StringComparison.OrdinalIgnoreCase))
                         {
                             index = ei;
@@ -167,8 +167,8 @@ namespace AlsaSharp.Library.Services
                     int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)ei, (UIntPtr)sb.Capacity, sb);
                     if (rc < 0)
                         continue;
-                    var itemName = sb.ToString() ?? string.Empty;
-                    var candidate = itemLabel?.Trim().Trim('\'') ?? string.Empty;
+                    var itemName = sb.ToString() ;
+                    var candidate = itemLabel?.Trim().Trim('\'') ;
                     if (string.Equals(itemName.Trim('\''), candidate, StringComparison.OrdinalIgnoreCase) || string.Equals(itemName, candidate, StringComparison.OrdinalIgnoreCase))
                     {
                         foundIndex = ei;
@@ -249,7 +249,7 @@ namespace AlsaSharp.Library.Services
                         {
                             var sb = new System.Text.StringBuilder(256);
                             int rc = InteropAlsa.snd_mixer_selem_get_enum_item_name(elem, (uint)idx, (UIntPtr)sb.Capacity, sb);
-                            var lbl = rc >= 0 ? sb.ToString() ?? string.Empty : idx.ToString();
+                            var lbl = rc >= 0 ? sb.ToString()  : idx.ToString();
                             type = "enum";
                             value = lbl.Trim('\'');
                             return true;

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Logging;
 
@@ -9,31 +6,22 @@ namespace AlsaSharp.Library.Services
     /// <summary>
     /// Probes ALSA hardware devices for supported formats, sample rates, and channel counts.
     /// </summary>
-    public class DeviceProber
+    public class AudioCardProberService(ILog<AudioCardProberService> log)
     {
-        private readonly ILog<DeviceProber>? _log;
-
-        /// <summary>
-        /// Creates a new DeviceProber.
-        /// </summary>
-        /// <param name="log">Optional logger for diagnostic output.</param>
-        public DeviceProber(ILog<DeviceProber>? log = null)
-        {
-            _log = log;
-        }
+        private readonly ILog<AudioCardProberService> _log = log;
 
         // Common sample rates to probe
-        private static readonly uint[] CommonRates = new uint[] { 8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000, 176400, 192000 };
-        private static readonly ushort[] CommonChannels = new ushort[] { 1, 2, 4, 6, 8 };
+        private static readonly uint[] CommonRates = [8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000, 176400, 192000];
+        private static readonly ushort[] CommonChannels = [1, 2, 4, 6, 8];
 
-        private static readonly (Core.Native.snd_pcm_format_t fmt, ushort bits)[] FormatCandidates = new[]
+        private readonly (snd_pcm_format_t fmt, ushort bits)[] FormatCandidates = new[]
         {
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_U8, (ushort)8),
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S16_LE, (ushort)16),
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_LE, (ushort)24),
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE, (ushort)24),
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_S32_LE, (ushort)32),
-            (Core.Native.snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE, (ushort)32),
+            (snd_pcm_format_t.SND_PCM_FORMAT_U8, (ushort)8),
+            (snd_pcm_format_t.SND_PCM_FORMAT_S16_LE, (ushort)16),
+            (snd_pcm_format_t.SND_PCM_FORMAT_S24_LE, (ushort)24),
+            (snd_pcm_format_t.SND_PCM_FORMAT_S24_3LE, (ushort)24),
+            (snd_pcm_format_t.SND_PCM_FORMAT_S32_LE, (ushort)32),
+            (snd_pcm_format_t.SND_PCM_FORMAT_FLOAT_LE, (ushort)32),
         };
 
         /// <summary>
@@ -55,7 +43,7 @@ namespace AlsaSharp.Library.Services
                 int rv = InteropAlsa.snd_pcm_open(ref pcm, settings.RecordingDeviceName, snd_pcm_stream_t.SND_PCM_STREAM_CAPTURE, 0);
                 if (rv < 0 || pcm == IntPtr.Zero)
                 {
-                    _log?.Warn($"[DeviceProber] Failed to open device {settings.RecordingDeviceName}: {rv}");
+                    _log.Warn($"[DeviceProber] Failed to open device {settings.RecordingDeviceName}: {rv}");
                     return settings; // best-effort: return unchanged
                 }
 
@@ -116,7 +104,7 @@ namespace AlsaSharp.Library.Services
                         }
                         catch { }
                     }
-                    _log?.Debug($"[DeviceProber] Probed {settings.RecordingDeviceName}: bits={supportedBits.Count}, rates={supportedRates.Count}, channels={supportedChannels.Count}");
+                    _log.Debug($"[DeviceProber] Probed {settings.RecordingDeviceName}: bits={supportedBits.Count}, rates={supportedRates.Count}, channels={supportedChannels.Count}");
                 }
                 finally
                 {
@@ -125,7 +113,7 @@ namespace AlsaSharp.Library.Services
             }
             catch (Exception ex)
             {
-                _log?.Error(ex, $"[DeviceProber] Exception probing {settings.RecordingDeviceName}");
+                _log.Error(ex, $"[DeviceProber] Exception probing {settings.RecordingDeviceName}");
             }
             finally
             {

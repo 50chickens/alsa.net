@@ -1,4 +1,4 @@
-namespace Example.SNRReduction.Services;
+namespace Example.SNRReduction.Models;
 
 public class SNRAnalysisResult
 {

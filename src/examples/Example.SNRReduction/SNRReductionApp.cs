@@ -1,49 +1,13 @@
 using AlsaSharp.Library.Logging;
-using Example.SNRReduction.Interfaces;
-using Example.SNRReduction.Models;
-using Example.SNRReduction.Services;
 namespace Example.SNRReduction;
 
-public class SNRReductionApp(ILog<SNRReductionApp> log, IControlSweepService controlSweepService, SNRReductionServiceOptions options, IAudioLevelMeterRecorderService audioLevelMeterRecorderService)
+public class SNRReductionApp(ILog<SNRReductionApp> log)
 {
     private readonly ILog<SNRReductionApp> _log = log;
-    private IControlSweepService _controlSweepService = controlSweepService;
-    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService;
-    private string fileNameToStoreMeasurements = "";
-    private MeasurementResult _measurementResults = new MeasurementResult(DateTime.UtcNow, DateTime.UtcNow, TimeSpan.Zero, TimeSpan.Zero, string.Empty);
+    
     public void Run()
     {
-        //generate time stamped filename with a user defined prefix 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        _log.Info("Starting SNR Reduction Application");
-        if (options.BaselineOnly)
-        {
-            _log.Info("BaselineOnly option set; skipping control sweep.");
-            fileNameToStoreMeasurements = $"baseline_{timestamp}.json";
-            _measurementResults.Readings = GetBaseLineReadings();
-            new JsonWriter(fileNameToStoreMeasurements).Append(_measurementResults);
-            _log.Info($"Baseline measurements written to: {fileNameToStoreMeasurements}");
-            return;
-        }
         _log.Info("SNR Reduction Application Finished");
     }
 
-    private List<AudioMeterLevelReading> GetBaseLineReadings()
-    {
-        try
-        {
-            var measurementResults = _audioLevelMeterRecorderService.GetAudioMeterLevelReadings(TimeSpan.FromSeconds(3), 10, "Baseline recording");
-            measurementResults.ForEach(r =>
-            {
-                var dbfs = r.ChannelDbfs != null && r.ChannelDbfs.Count > 0 ? string.Join(", ", r.ChannelDbfs.Select((v, i) => $"Ch{i + 1}:{v:F2}dBFS")) : "no-channels";
-                _log.Info($"Timestamp: {r.TimestampUtc}, {dbfs}");
-            });
-            return measurementResults;
-        }
-        catch (NotSupportedException)
-        {
-            _log.Warn("Baseline measurement is not supported without a device-specific meter. Provide a per-device meter to the recorder.");
-            return new List<AudioMeterLevelReading>();
-        }
-    }
 }

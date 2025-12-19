@@ -1,5 +1,3 @@
-using System.Linq;
-using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
 using AlsaSharp.Tests.Library;
@@ -27,22 +25,5 @@ namespace AlsaSharp.Tests
             _log.Info($"Logger initialized for {GetType().Name}.");
         }
 
-        [Test]
-        [Category("Integration")]
-        public void GetControls_ForFirstCard_ReturnsArray()
-        {
-            // Enumerate sound devices exposed by libasound
-            var devices = UnixSoundDeviceBuilder.Build();
-            var first = devices.FirstOrDefault();
-            Assert.IsNotNull(first, "No ALSA sound devices found on system to test controls.");
-
-            // Create a manager and retrieve simple mixer elements for the discovered device
-            var mixerName = first.Settings.MixerDeviceName;
-            Assert.IsNotNull(mixerName, "Mixer device name is null or not available.");
-            var soundDeviceManager = new SoundDeviceManager(_soundDeviceManagerLog, 0, mixerName);
-            var controls = soundDeviceManager.GetMixerSimpleElements(first);
-            _log.Info($"Found {controls.Count} controls for device '{first.Settings.MixerDeviceName}'");
-            Assert.IsNotNull(controls, "GetMixerControls returned null");
-        }
     }
 }

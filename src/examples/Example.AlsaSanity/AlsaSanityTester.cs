@@ -1,12 +1,13 @@
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// ALSA sanity tester for debugging.
 /// </summary>
-public class AlsaSanityTester(string label, Microsoft.Extensions.Logging.ILogger<AlsaSanityTester> log)
+public class AlsaSanityTester(string label, ILogger<AlsaSanityTester> log)
 {
     private readonly string _label = label ?? throw new ArgumentNullException("Label cannot be null");
-    private readonly Microsoft.Extensions.Logging.ILogger<AlsaSanityTester> _log = log ?? throw new ArgumentNullException(nameof(log));
+    private readonly ILogger<AlsaSanityTester> _log = log ?? throw new ArgumentNullException(nameof(log));
     public void TestSanity()
     {
         _log.LogInformation("Starting ALSA debug program for {Label}...", _label);
@@ -20,7 +21,7 @@ public class AlsaSanityTester(string label, Microsoft.Extensions.Logging.ILogger
             _log.LogInformation("snd_card_get_name -> rc={Rc}, ptr={Ptr}", returnCode, (p == IntPtr.Zero ? "<null>" : p.ToString()));
             if (returnCode == 0 && p != IntPtr.Zero)
             {
-                string name = Marshal.PtrToStringUTF8(p) ?? string.Empty;
+                string name = Marshal.PtrToStringUTF8(p) ;
                 _log.LogInformation("Card {CardIndex} name: '{Name}'", card, name);
                 Native.free(p);
             }
@@ -30,13 +31,11 @@ public class AlsaSanityTester(string label, Microsoft.Extensions.Logging.ILogger
             _log.LogInformation("snd_card_get_longname -> rc={Rc}, ptr={Ptr}", returnCode, (q == IntPtr.Zero ? "<null>" : q.ToString()));
             if (returnCode == 0 && q != IntPtr.Zero)
             {
-                string longname = Marshal.PtrToStringUTF8(q) ?? string.Empty;
+                string longname = Marshal.PtrToStringUTF8(q) ;
                 _log.LogInformation("Card {CardIndex} longname: '{LongName}'", card, longname);
                 Native.free(q);
             }
         }
-
-        // Try opening the mixer for this card to exercise the same path
 
         _log.LogInformation("Attempting mixer open/attach for card={Card}", card);
         IntPtr mixer;

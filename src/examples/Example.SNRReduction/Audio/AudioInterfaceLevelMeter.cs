@@ -1,25 +1,22 @@
-using System.Collections.Generic;
-using System.Linq;
 using AlsaSharp;
 using AlsaSharp.Library;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Services;
-#nullable enable
 
 namespace Example.SNRReduction.Audio;
 
-public class AudioInterfaceLevelMeter(ISoundDevice device, ILog<AudioInterfaceLevelMeter> log) : IAudioInterfaceLevelMeter
+public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAudioInterfaceLevelMeterService
 {
-    private const double noiseFloor = -120.0;
-    private readonly ISoundDevice _device = device;
+    private const double noiseFloor = -150.0; //silence is ~ 90 dBFS, use -150 dBFS as noise floor
+    private ISoundDevice _device;
     private readonly ILog<AudioInterfaceLevelMeter> _log = log;
     private readonly object _recordLock = new object();
-    public (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(int captureDurationMs)
+    public (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(ISoundDevice device, int captureDurationMs)
     {
-        // accumulate per-channel sums-of-squares
+        _device = device;
+        
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(captureDurationMs + 1000));
         var acc = new Accumulator(_device);
-
         Task? task = null;
         try
         {

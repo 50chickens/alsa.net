@@ -586,7 +586,7 @@ class UnixSoundDevice(SoundDeviceSettings settings, ILogger<UnixSoundDevice>? lo
                 try
                 {
                     IntPtr namePtr = InteropAlsa.snd_mixer_selem_get_name(elem);
-                    var name = Marshal.PtrToStringUTF8(namePtr) ?? string.Empty;
+                    var name = Marshal.PtrToStringUTF8(namePtr) ;
                     if (string.Equals(name, simpleElementName, StringComparison.OrdinalIgnoreCase))
                     {
                         // determine channel target

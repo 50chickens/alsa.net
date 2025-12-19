@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\AlsaSharp.Core\AlsaSharp.Core.csproj" />
+    <ProjectReference Include="..\..\AlsaSharp.Library.Logging\AlsaSharp.Library.Logging.csproj" />
     <ProjectReference Include="..\..\AlsaSharp\AlsaSharp.csproj" />
     <ProjectReference Include="..\..\AlsaSharp.Library.Extensions\AlsaSharp.Library.Extensions.csproj" />
   </ItemGroup>
