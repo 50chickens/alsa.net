@@ -10,14 +10,17 @@ public class AudioLevelMeterRecorderService : IAudioLevelMeterRecorderService
     private TimeSpan _measurementDuration;
     private int _measurementCount;
     private IAudioInterfaceLevelMeterService _audioInterfaceLevelMeterService;
-    private string resultFileName;
+    private readonly FileNameGenerator _fileNameGenerator;
+    private string _resultFileName;
 
-    public AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, AudioLevelMeterRecorderServiceOptions options, IAudioInterfaceLevelMeterService audioInterfaceLevelMeterService)
+    public AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, AudioLevelMeterRecorderServiceOptions options, IAudioInterfaceLevelMeterService audioInterfaceLevelMeterService, FileNameGenerator fileNameGenerator)
     {
         _log = log ?? throw new ArgumentNullException(nameof(log));
         _measurementDuration = TimeSpan.FromSeconds(options.MeasurementDuration);
         _measurementCount = options.MeasurementCount;
         _audioInterfaceLevelMeterService = audioInterfaceLevelMeterService ?? throw new ArgumentNullException(nameof(audioInterfaceLevelMeterService));
+        _fileNameGenerator = fileNameGenerator ?? throw new ArgumentNullException(nameof(fileNameGenerator));
+        _resultFileName = null;
     }
     public List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device)
     {
@@ -27,12 +30,18 @@ public class AudioLevelMeterRecorderService : IAudioLevelMeterRecorderService
             throw new ArgumentException("measurementCount must be > 0", nameof(_measurementCount));
         List<AudioMeterLevelReading> _audioLevelReadings = new();
 
+        // Generate filename on first use
+        if (string.IsNullOrEmpty(_resultFileName))
+        {
+            _resultFileName = _fileNameGenerator.GetFileName("audio_level_recording");
+        }
+
         for (int i = 0; i < _measurementCount; i++)
         {
             _log.Trace($"Measurement {i + 1}/{_measurementCount} ({_measurementDuration.TotalSeconds} seconds)");
             AudioMeterLevelReading audioMeterLevelReading = RecordAudioMeterLevel(device);
             _log.Info($"Result: {audioMeterLevelReading}. Completed {i + 1}/{_measurementCount} ({_measurementDuration.TotalSeconds} seconds).");
-            JsonWriter jsonWriter = new JsonWriter(resultFileName);
+            JsonWriter jsonWriter = new JsonWriter(_resultFileName);
             jsonWriter.Append(audioMeterLevelReading);
             _audioLevelReadings.Add(audioMeterLevelReading);
             Thread.Sleep(1000);

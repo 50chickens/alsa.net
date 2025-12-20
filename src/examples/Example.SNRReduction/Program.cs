@@ -2,6 +2,7 @@ using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Extensions;
 using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
+using Example.SNRReduction.Audio;
 using Example.SNRReduction.Extensions;
 using Example.SNRReduction.Logging;
 using Example.SNRReduction.Models;
@@ -33,19 +34,23 @@ internal class Program
         builder.Services.AddOptions<AudioCardOptions>().Bind(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(new ControlSweepOptions(new List<AlsaControl>()));
 
-       
-        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
-        builder.Services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
+        // Register logger first so it's available for all other services
         builder.Services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
-        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
+        
+        // Register core services
+        builder.Services.AddSingleton<FileNameGenerator>();
         builder.Services.AddSingleton<AudioCardProberService>();
-        builder.Services.AddSingleton<IHintService, HintService>();
+        builder.Services.AddSingleton<HintService>();
+        builder.Services.AddSingleton<IHintService>(sp => sp.GetRequiredService<HintService>());
+        builder.Services.AddSingleton<IAudioDeviceBuilder, AudioDeviceBuilder>();
+        builder.Services.AddSingleton<IAudioInterfaceLevelMeterService, AudioInterfaceLevelMeter>();
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
 
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         
         builder.Services.Configure<AudioCardOptions>(builder.Configuration.GetSection(AudioCardOptions.Settings));
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<SNRReductionServiceOptions>>().Value);
+        builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Logging.ClearProviders();
         builder.Services.AddSNRReductionWorker();

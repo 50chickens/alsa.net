@@ -25,8 +25,7 @@ public class SNRReductionWorker : BackgroundService
         IOptions<SNRReductionServiceOptions> options,
         IHostApplicationLifetime lifetime,
         IAudioDeviceBuilder audioDeviceBuilder,
-        IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
-        ISNRWorkerHelper helper)
+        IAudioLevelMeterRecorderService audioLevelMeterRecorderService)
     {
         _log = log ?? throw new ArgumentNullException(nameof(log));
         _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
