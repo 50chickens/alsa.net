@@ -8,18 +8,9 @@ namespace AlsaSharp.Library.Services
     /// <summary>
     /// Encapsulates logic to set mixer control values (volume/switch) on elements.
     /// </summary>
-    public class MixerService
+    public class MixerService(ILog<MixerService>? log = null)
     {
-        private readonly ILog<MixerService>? _log;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MixerService"/> class.
-        /// </summary>
-        /// <param name="log">Optional logger for diagnostic messages.</param>
-        public MixerService(ILog<MixerService>? log = null)
-        {
-            _log = log;
-        }
+        private readonly ILog<MixerService>? _log = log;
         /// <summary>Attempts to set playback volume on a mixer element.</summary>
         /// <returns>True on success, false otherwise.</returns>
         public bool TrySetPlaybackVolume(int card, string controlName, string channelName, nint value)

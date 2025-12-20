@@ -1,3 +1,5 @@
+#nullable enable
+
 using Example.SNRReduction.Models;
 using Microsoft.Extensions.Options;
 

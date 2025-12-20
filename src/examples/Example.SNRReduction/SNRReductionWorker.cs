@@ -11,29 +11,18 @@ namespace Example.SNRReduction;
 /// <summary>
 /// Hosted worker that runs the baseline measurement and prints results to the console.
 /// </summary>
-public class SNRReductionWorker : BackgroundService
+public class SNRReductionWorker(ILog<SNRReductionWorker> log,
+    IOptions<SNRReductionServiceOptions> options,
+    IHostApplicationLifetime lifetime,
+    IAudioDeviceBuilder audioDeviceBuilder,
+    IAudioLevelMeterRecorderService audioLevelMeterRecorderService) : BackgroundService
 {
-    private readonly ILog<SNRReductionWorker> _log;
-
-    private readonly SNRReductionServiceOptions _snrReductionServiceOptions;
-    private IEnumerable<ISoundDevice> _soundDevices;
-    private readonly IHostApplicationLifetime _lifetime;
-    private readonly IAudioDeviceBuilder _audioDeviceBuilder;
-    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService;
-    
-    public SNRReductionWorker(ILog<SNRReductionWorker> log,
-        IOptions<SNRReductionServiceOptions> options,
-        IHostApplicationLifetime lifetime,
-        IAudioDeviceBuilder audioDeviceBuilder,
-        IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
-        ISNRWorkerHelper helper)
-    {
-        _log = log ?? throw new ArgumentNullException(nameof(log));
-        _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
-        _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
-        _audioDeviceBuilder = audioDeviceBuilder ?? throw new ArgumentNullException(nameof(audioDeviceBuilder));
-        _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
-    }
+    private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
+    private readonly SNRReductionServiceOptions _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
+    private IEnumerable<ISoundDevice> _soundDevices = Enumerable.Empty<ISoundDevice>();
+    private readonly IHostApplicationLifetime _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
+    private readonly IAudioDeviceBuilder _audioDeviceBuilder = audioDeviceBuilder ?? throw new ArgumentNullException(nameof(audioDeviceBuilder));
+    private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
