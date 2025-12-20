@@ -1,27 +1,19 @@
+#nullable enable
+
 using AlsaSharp;
 using AlsaSharp.Library.Logging;
 using Example.SNRReduction.Models;
 
 namespace Example.SNRReduction.Services;
 
-public class AudioLevelMeterRecorderService : IAudioLevelMeterRecorderService
+public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, AudioLevelMeterRecorderServiceOptions options, IAudioInterfaceLevelMeterService audioInterfaceLevelMeterService, FileNameGenerator fileNameGenerator) : IAudioLevelMeterRecorderService
 {
-    private readonly ILog<AudioLevelMeterRecorderService> _log;
-    private TimeSpan _measurementDuration;
-    private int _measurementCount;
-    private IAudioInterfaceLevelMeterService _audioInterfaceLevelMeterService;
-    private readonly FileNameGenerator _fileNameGenerator;
-    private string _resultFileName;
-
-    public AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService> log, AudioLevelMeterRecorderServiceOptions options, IAudioInterfaceLevelMeterService audioInterfaceLevelMeterService, FileNameGenerator fileNameGenerator)
-    {
-        _log = log ?? throw new ArgumentNullException(nameof(log));
-        _measurementDuration = TimeSpan.FromSeconds(options.MeasurementDuration);
-        _measurementCount = options.MeasurementCount;
-        _audioInterfaceLevelMeterService = audioInterfaceLevelMeterService ?? throw new ArgumentNullException(nameof(audioInterfaceLevelMeterService));
-        _fileNameGenerator = fileNameGenerator ?? throw new ArgumentNullException(nameof(fileNameGenerator));
-        _resultFileName = null;
-    }
+    private readonly ILog<AudioLevelMeterRecorderService> _log = log ?? throw new ArgumentNullException(nameof(log));
+    private readonly TimeSpan _measurementDuration = TimeSpan.FromSeconds(options.MeasurementDuration);
+    private readonly int _measurementCount = options.MeasurementCount;
+    private readonly IAudioInterfaceLevelMeterService _audioInterfaceLevelMeterService = audioInterfaceLevelMeterService ?? throw new ArgumentNullException(nameof(audioInterfaceLevelMeterService));
+    private readonly FileNameGenerator _fileNameGenerator = fileNameGenerator ?? throw new ArgumentNullException(nameof(fileNameGenerator));
+    private string? _resultFileName;
     public List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device)
     {
         if (_measurementDuration <= TimeSpan.Zero)

@@ -1,3 +1,5 @@
+#nullable enable
+
 using AlsaSharp;
 using AlsaSharp.Library;
 using AlsaSharp.Library.Logging;

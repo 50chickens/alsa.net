@@ -21,9 +21,9 @@ namespace AlsaSharp.Library.Services
         /// </summary>
         public HintService(ILog<HintService> log)
         {
+            _log = log;
             _hints = GetAlsaHints();
             _cards = GetAlsaCardInfos();
-            _log = log;
         }
 
         /// <summary>
