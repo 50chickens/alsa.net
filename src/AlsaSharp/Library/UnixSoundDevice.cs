@@ -4,9 +4,9 @@ namespace AlsaSharp.Library;
 /// <summary>
 /// Provides sound device functionality for Unix-based systems using ALSA.
 /// </summary>
-public class UnixSoundDevice(SoundDeviceSettings settings, ILog<UnixSoundDevice> log) : ISoundDevice
+public class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 {
-    private readonly ILog<UnixSoundDevice> _log;
+    private readonly ILog<UnixSoundDevice> _log = LogManager.GetLogger<UnixSoundDevice>();
     private readonly SoundDeviceSettings _settings;
     private readonly AlsaPlaybackDevice _playback;
     private readonly AlsaRecordingDevice _recording;
@@ -37,6 +37,8 @@ public class UnixSoundDevice(SoundDeviceSettings settings, ILog<UnixSoundDevice>
         get => _mixer.RecordingMute;
         set => _mixer.RecordingMute = value;
     }
+
+    public ILog<UnixSoundDevice> Log => _log;
 
     #region Playback Methods
 

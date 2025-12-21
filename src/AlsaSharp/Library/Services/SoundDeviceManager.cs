@@ -77,9 +77,9 @@ namespace AlsaSharp.Library.Services
 
                     // check common channels (front left/right and mono)
                     var channelIds = new[] { snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_LEFT, snd_mixer_selem_channel_id.SND_MIXER_SCHN_FRONT_RIGHT, snd_mixer_selem_channel_id.SND_MIXER_SCHN_MONO };
-                    foreach (var ch in channelIds)
+                    foreach (var channelid in channelIds)
                     {
-                        int hasPlayback = InteropAlsa.snd_mixer_selem_has_playback_channel(elem, ch);
+                        int hasPlayback = InteropAlsa.snd_mixer_selem_has_playback_channel(elem, channelid);
                         if (hasPlayback <= 0)
                             continue;
 
@@ -88,7 +88,7 @@ namespace AlsaSharp.Library.Services
                         if (hasVolume <= 0)
                         {
                             // Element reports playback channel but not volume; skip.
-                            _logger?.LogWarning("[ALSA] simpleElement='{SimpleElement}' has playback channel but no playback volume support; skipping channel={Channel}.", simpleElementName, ch);
+                            _log.Warn($"[ALSA] simpleElement='{simpleElementName}' has playback channel but no playback volume support; skipping channelId={channelid}.");
                             continue;
                         }
 
@@ -98,10 +98,10 @@ namespace AlsaSharp.Library.Services
                             nint min = 0;
                             nint max = 0;
 
-                            returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, ch, &raw);
+                            returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume(elem, channelid, &raw);
                             if (returnCode < 0)
                             {
-                                _logger?.LogWarning("[ALSA] snd_mixer_selem_get_playback_volume failed for control='{SimpleElement}' channel={Channel}: {Error}", simpleElementName, ch, InteropAlsa.StrError(returnCode));
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume failed for control='{simpleElementName}' channelId={channelid}: {InteropAlsa.StrError(returnCode)}");
                                 continue;
                             }
 
@@ -109,7 +109,7 @@ namespace AlsaSharp.Library.Services
                             returnCode = InteropAlsa.snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
                             if (returnCode < 0)
                             {
-                                _logger?.LogWarning("[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{SimpleElement}' channel={Channel}: {Error}", simpleElementName, ch, InteropAlsa.StrError(returnCode));
+                                _log.Warn($"[ALSA] snd_mixer_selem_get_playback_volume_range failed for control='{simpleElementName}' channelId={channelid}: {InteropAlsa.StrError(returnCode)}");
                                 continue;
                             }
 
