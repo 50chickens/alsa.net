@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\AlsaSharp\AlsaSharp.csproj" />
+    <ProjectReference Include="..\..\AlsaSharp.Library.Logging\AlsaSharp.Library.Logging.csproj" />
   </ItemGroup>
 
 </Project>

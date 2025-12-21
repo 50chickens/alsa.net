@@ -2,7 +2,6 @@ using System.Runtime.InteropServices;
 using AlsaSharp.Core.Native;
 using AlsaSharp.Library.Audio;
 using AlsaSharp.Library.Logging;
-using Microsoft.Extensions.Logging;
 
 namespace AlsaSharp.Library.Services
 {
@@ -12,7 +11,6 @@ namespace AlsaSharp.Library.Services
     public class SoundDeviceManager : ISoundDeviceManager
     {
         private readonly ILog<ISoundDeviceManager> _log;
-        private readonly ILogger<SoundDeviceManager>? _logger;
 
         /// <summary>
         /// Creates a new instance of the Card class.
@@ -20,11 +18,9 @@ namespace AlsaSharp.Library.Services
         /// <param name="log">Logger instance scoped to this type.</param>
         /// <param name="index">Card numeric id.</param>
         /// <param name="name">Card short name.</param>
-        /// <param name="logger">Optional Microsoft.Extensions.Logging logger.</param>
-        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name, ILogger<SoundDeviceManager>? logger = null)
+        public SoundDeviceManager(ILog<ISoundDeviceManager> log, int index, string name)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
-            _logger = logger;
         }
 
         /// <summary>

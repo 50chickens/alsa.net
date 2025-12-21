@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AlsaSharp.Library.Logging;
 using AlsaSharp.Library.Services;
 
 namespace Example.AlsaHints;
@@ -6,9 +7,9 @@ namespace Example.AlsaHints;
 /// <summary>
 /// Worker service for ALSA hints.
 /// </summary>
-public class AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintService, IHostApplicationLifetime lifetime) : BackgroundService
+public class AlsaHintWorker(ILog<AlsaHintWorker> log, IHintService alsaHintService, IHostApplicationLifetime lifetime) : BackgroundService
 {
-    private readonly ILogger<AlsaHintWorker> _log = log;
+    private readonly ILog<AlsaHintWorker> _log = log;
     private readonly IHintService _alsaHintService = alsaHintService;
     private readonly IHostApplicationLifetime _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
 
@@ -17,13 +18,13 @@ public class AlsaHintWorker(ILogger<AlsaHintWorker> log, IHintService alsaHintSe
         try
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
-            _log.LogInformation("Getting ALSA cards...");
+            _log.Info("Getting ALSA cards...");
             var cards = _alsaHintService.GetAlsactlCards();
-            _log.LogInformation("Getting ALSA hints...");
+            _log.Info("Getting ALSA hints...");
             var hints = _alsaHintService.GetCanonicalHints();
             var combined = new { Alsactl = cards, Hints = hints };
             var logoutput = new YamlDotNet.Serialization.Serializer().Serialize(combined);
-            _log.LogInformation(logoutput);
+            _log.Info(logoutput);
         }
         finally
         {
