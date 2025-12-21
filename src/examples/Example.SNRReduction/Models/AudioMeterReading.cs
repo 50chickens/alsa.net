@@ -11,7 +11,7 @@ public class AudioMeterLevelReading()
     public List<double> ChannelRms { get; set; } = new List<double>();
     // Units for the reading fields
     public string TimestampUnit { get; set; } = "UTC";
-    public string ChannelDbfsUnit { get; set; } = "decibels relative to full scale (dBFS)";
+    public string ChannelDbfsUnit { get; set; } = "(dBFS)";
     public string ChannelRmsUnit { get; set; } = "root-mean-square (linear, full-scale=1.0)";
     public override string ToString()
     {
