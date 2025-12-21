@@ -118,6 +118,10 @@ namespace AlsaSharp.Library.Services
                     }
 
                     var simpleElement = channels.FirstOrDefault();
+                    if (simpleElement != null)
+                    {
+                        list.Add(simpleElement);
+                    }
 
                     elem = InteropAlsa.snd_mixer_elem_next(elem);
                 }

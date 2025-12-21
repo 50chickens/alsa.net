@@ -7,10 +7,10 @@ namespace AlsaSharp.Library;
 public class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
 {
     private readonly ILog<UnixSoundDevice> _log = LogManager.GetLogger<UnixSoundDevice>();
-    private readonly SoundDeviceSettings _settings;
-    private readonly AlsaPlaybackDevice _playback;
-    private readonly AlsaRecordingDevice _recording;
-    private readonly AlsaMixerDevice _mixer;
+    private readonly SoundDeviceSettings _settings = settings;
+    private readonly AlsaPlaybackDevice _playback = new AlsaPlaybackDevice(settings);
+    private readonly AlsaRecordingDevice _recording = new AlsaRecordingDevice(settings);
+    private readonly AlsaMixerDevice _mixer = new AlsaMixerDevice(settings);
     private bool _disposed;
     public SoundDeviceSettings Settings => _settings;
 
