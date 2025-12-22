@@ -64,11 +64,8 @@ internal class AlsaRecordingDevice : IDisposable
         var header = WavHeader.Build(_settings.RecordingSampleRate, 
             _settings.RecordingChannels, _settings.RecordingBitsPerSample);
 
-        using (var memoryStream = new MemoryStream())
-        {
-            header.WriteToStream(memoryStream);
-            onDataAvailable?.Invoke(memoryStream.ToArray());
-        }
+        // Note: Raw PCM data only - no WAV header sent to callback
+        // This ensures audio level measurements are accurate
 
         OpenRecordingPcm();
         try
