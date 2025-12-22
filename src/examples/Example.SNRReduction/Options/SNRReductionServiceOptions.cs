@@ -1,4 +1,4 @@
-namespace Example.SNRReduction.Models;
+﻿namespace Example.SNRReduction.Models;
 
 public class SNRReductionServiceOptions
 {
@@ -15,4 +15,12 @@ public class SNRReductionServiceOptions
     public bool MeasureSNR { get; set; } = false;
     public bool MeasureAudioLevels { get; set; } = true;
     public string ApplyAlsaState { get; internal set; } = string.Empty;
+    public bool GenerateTestTone { get; set; } = false;
+    public int TestToneFrequencyHz { get; set; } = 440;
+    public double TestToneAmplitudeDbfs { get; set; } = -3.0;
+    public int TestToneLeftChannelDuration { get; set; } = 5000;
+    public int TestToneRightChannelDuration { get; set; } = 5000;
+    public int TestToneSilenceDuration { get; set; } = 2000;
+    public int TestToneBothChannelsDuration { get; set; } = 5000;
+    public bool VerifyLoopBack { get; set; } = true;
 }

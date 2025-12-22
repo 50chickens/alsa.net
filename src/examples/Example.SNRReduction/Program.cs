@@ -45,6 +45,7 @@ internal class Program
         builder.Services.AddSingleton<IAudioDeviceBuilder, AudioDeviceBuilder>();
         builder.Services.AddSingleton<IAudioInterfaceLevelMeterService, AudioInterfaceLevelMeter>();
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
+        builder.Services.AddSingleton<ITestToneService, TestToneService>();
 
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         

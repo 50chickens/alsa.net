@@ -1,6 +1,7 @@
 using AlsaSharp;
 using AlsaSharp.Library.Builders;
 using AlsaSharp.Library.Logging;
+using AlsaSharp.Library.Services;
 using Example.SNRReduction.Models;
 using Example.SNRReduction.Services;
 
@@ -15,7 +16,8 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IOptions<SNRReductionServiceOptions> options,
     IHostApplicationLifetime lifetime,
     IAudioDeviceBuilder audioDeviceBuilder,
-    IAudioLevelMeterRecorderService audioLevelMeterRecorderService) : BackgroundService
+    IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
+    ITestToneService testToneService) : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
     private readonly SNRReductionServiceOptions _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
@@ -23,11 +25,29 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private readonly IHostApplicationLifetime _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     private readonly IAudioDeviceBuilder _audioDeviceBuilder = audioDeviceBuilder ?? throw new ArgumentNullException(nameof(audioDeviceBuilder));
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
+    private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.Trace("SNRReductionWorker starting baseline measurement...");
 
+        if (_snrReductionServiceOptions.GenerateTestTone)
+        {
+            _log.Info("GenerateTestTone is true. Generating test tone...");
+            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+            foreach (ISoundDevice device in _soundDevices)
+            {
+                _log.Info($"Playing test tone on sound device: {device.Settings.CardName}");
+                _testToneService.PlayTestTone(
+                    device.Settings.PlaybackDeviceName,
+                    _snrReductionServiceOptions.TestToneFrequencyHz,
+                    _snrReductionServiceOptions.TestToneAmplitudeDbfs,
+                    _snrReductionServiceOptions.TestToneLeftChannelDuration,
+                    _snrReductionServiceOptions.TestToneRightChannelDuration,
+                    _snrReductionServiceOptions.TestToneBothChannelsDuration
+                );
+            }
+        }
 
         if (_snrReductionServiceOptions.MeasureAudioLevels)
         {
