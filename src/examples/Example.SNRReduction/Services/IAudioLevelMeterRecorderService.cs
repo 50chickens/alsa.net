@@ -5,5 +5,5 @@ namespace Example.SNRReduction.Services;
 
 public interface IAudioLevelMeterRecorderService
 {
-    List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device);
+    List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device, CancellationToken stoppingToken);
 }

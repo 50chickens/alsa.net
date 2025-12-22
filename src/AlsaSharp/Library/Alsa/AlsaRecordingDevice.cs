@@ -112,8 +112,7 @@ internal class AlsaRecordingDevice : IDisposable
         saveStream.Flush();
     }
 
-    private unsafe void ReadAudioStream(Action<byte[]> onDataAvailable, WavHeader header, 
-        ref IntPtr @params, ref int dir, CancellationToken cancellationToken)
+    private unsafe void ReadAudioStream(Action<byte[]> onDataAvailable, WavHeader header, ref IntPtr @params, ref int dir, CancellationToken cancellationToken)
     {
         var frames = AlsaPcmHelper.GetPeriodSize(@params, ref dir, _log);
         var bufferSize = frames * header.BlockAlign;

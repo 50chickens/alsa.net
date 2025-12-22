@@ -14,7 +14,7 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
     private readonly IAudioInterfaceLevelMeterService _audioInterfaceLevelMeterService = audioInterfaceLevelMeterService ?? throw new ArgumentNullException(nameof(audioInterfaceLevelMeterService));
     private readonly FileNameGenerator _fileNameGenerator = fileNameGenerator ?? throw new ArgumentNullException(nameof(fileNameGenerator));
     private string? _resultFileName;
-    public List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device)
+    public List<AudioMeterLevelReading> RecordAudioMeterLevels(ISoundDevice device, CancellationToken cancellationToken)
     {
         if (_measurementDuration <= TimeSpan.Zero)
             throw new ArgumentException("Measurement duration must be > 0 seconds.", nameof(_measurementDuration));
@@ -30,8 +30,13 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
 
         for (int i = 0; i < _measurementCount; i++)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _log.Info("Audio level measurement cancelled.");
+                break;
+            }
             _log.Trace($"Measurement {i + 1}/{_measurementCount} ({_measurementDuration.TotalSeconds} seconds)");
-            AudioMeterLevelReading audioMeterLevelReading = RecordAudioMeterLevel(device);
+            AudioMeterLevelReading audioMeterLevelReading = RecordAudioMeterLevel(device, cancellationToken);
             _log.Info($"Result: {audioMeterLevelReading}. Completed {i + 1}/{_measurementCount} ({_measurementDuration.TotalSeconds} seconds).");
             JsonWriter jsonWriter = new JsonWriter(_resultFileName);
             jsonWriter.Append(audioMeterLevelReading);
@@ -40,9 +45,9 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
         }
         return _audioLevelReadings;
     }
-    public AudioMeterLevelReading RecordAudioMeterLevel(ISoundDevice device)
+    public AudioMeterLevelReading RecordAudioMeterLevel(ISoundDevice device, CancellationToken cancellationToken)
     {
-        var (channelDbfs, channelRms) = _audioInterfaceLevelMeterService.MeasureLevels(device, (int)_measurementDuration.TotalMilliseconds);
+        var (channelDbfs, channelRms) = _audioInterfaceLevelMeterService.MeasureLevels(device, (int)_measurementDuration.TotalMilliseconds, cancellationToken);
         AudioMeterLevelReading audioLevelReading = new()
         {
             TimestampUtc = DateTime.UtcNow,

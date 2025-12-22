@@ -10,22 +10,24 @@ namespace Example.SNRReduction.Audio;
 public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAudioInterfaceLevelMeterService
 {
     private const double noiseFloor = -150.0; //silence is ~ 90 dBFS, use -150 dBFS as noise floor
-    private ISoundDevice _device;
     private readonly ILog<AudioInterfaceLevelMeter> _log = log;
     private readonly object _recordLock = new object();
-    public (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(ISoundDevice device, int captureDurationMs)
+    
+    public (List<double> ChannelDbfs, List<double> ChannelRms) MeasureLevels(ISoundDevice device, int captureDurationMs, CancellationToken cancellationToken)
     {
-        _device = device;
-        
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(captureDurationMs + 1000));
-        var acc = new Accumulator(_device);
+        var acc = new Accumulator(device);
         Task? task = null;
+        
+        // Create a timeout cancellation source that respects the capture duration
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(captureDurationMs);
+        
         try
         {
             lock (_recordLock)
             {
-                task = Task.Run(() => _device.Record(acc.OnData, cts.Token));
-                task.Wait(cts.Token);
+                task = Task.Run(() => device.Record(acc.OnData, timeoutCts.Token), timeoutCts.Token);
+                task.Wait(timeoutCts.Token);
             }
         }
         catch (OperationCanceledException)
@@ -48,14 +50,14 @@ public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAud
         if (acc.Samples == 0)
         {
             // No data captured — return noise floor per channel
-            int chs = (int)(_device?.Settings?.RecordingChannels ?? (uint)1);
+            int chs = (int)(device?.Settings?.RecordingChannels ?? (uint)1);
             var dbfs = Enumerable.Repeat(noiseFloor, chs).ToList();
             var rms = Enumerable.Repeat(0.0, chs).ToList();
             return (dbfs, rms);
         }
 
-        int deviceChannels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
-        int bits = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
+        int deviceChannels = (int)(device?.Settings?.RecordingChannels ?? (uint)2);
+        int bits = (int)(device?.Settings?.RecordingBitsPerSample ?? (uint)16);
         double maxAmp = Math.Pow(2.0, bits - 1) - 1.0; // e.g., 32767 for 16-bit
 
         // use accumulated sums from Accumulator
@@ -67,6 +69,7 @@ public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAud
         var channelDbfs = new List<double>(deviceChannels);
         for (int ch = 0; ch < deviceChannels; ch++)
         {
+            // RMS calculation: divide by number of samples PER CHANNEL, not total frames
             double rms = Math.Sqrt((double)sumSq[ch] / (double)acc.Samples) / maxAmp;
             channelRms.Add(rms);
             channelDbfs.Add(rms <= 0 ? noiseFloor : 20.0 * Math.Log10(rms));
@@ -79,21 +82,19 @@ public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAud
     {
         private readonly ISoundDevice _device;
         public List<long> SumSq = new List<long>();
-        public int Samples;
-        private bool _headerSeen;
+        public int Samples; // This is the count of samples PER CHANNEL
 
         public Accumulator(ISoundDevice device)
         {
             _device = device;
             SumSq = new List<long>();
             Samples = 0;
-            _headerSeen = false;
         }
 
         public void OnData(byte[] buffer)
         {
-            if (!_headerSeen)
-            { _headerSeen = true; return; }
+            if (buffer == null || buffer.Length == 0)
+                return;
 
             int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
             int bytesPerSample = Math.Max(1, bitsPerSample / 8);
@@ -105,24 +106,28 @@ public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAud
             int frameCount = buffer.Length / (bytesPerSample * channels);
             if (frameCount <= 0)
                 return;
+            
             // ensure SumSq list capacity
             while (SumSq.Count < channels)
                 SumSq.Add(0);
+            
             for (int i = 0; i < frameCount; i++)
             {
                 int offset = i * channels * bytesPerSample;
-                if (offset + bytesPerSample - 1 >= buffer.Length)
+                if (offset + (channels * bytesPerSample) > buffer.Length)
                     break;
 
                 // read all channels generically
                 for (int ch = 0; ch < channels; ch++)
                 {
                     int so = offset + ch * bytesPerSample;
-                    if (so + bytesPerSample - 1 >= buffer.Length)
+                    if (so + bytesPerSample > buffer.Length)
                         break;
+                    
                     long sample = 0;
                     if (bytesPerSample == 3)
                     {
+                        // 24-bit signed integer (little-endian)
                         int v = buffer[so] | (buffer[so + 1] << 8) | (buffer[so + 2] << 16);
                         if ((v & 0x800000) != 0)
                             v |= unchecked((int)0xFF000000);
@@ -132,14 +137,17 @@ public class AudioInterfaceLevelMeter(ILog<AudioInterfaceLevelMeter> log) : IAud
                     {
                         sample = BitConverter.ToInt32(buffer, so);
                     }
-                    else
+                    else // bytesPerSample == 2 or 1
                     {
                         sample = BitConverter.ToInt16(buffer, so);
                     }
+                    
                     SumSq[ch] += sample * sample;
                 }
-                Samples++;
             }
+            
+            // Samples represents the number of samples per channel
+            Samples += frameCount;
         }
     }
 }

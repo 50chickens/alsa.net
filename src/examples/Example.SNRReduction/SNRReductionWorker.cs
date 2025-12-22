@@ -35,8 +35,10 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
             foreach (ISoundDevice device in _soundDevices)
             {
+                if (stoppingToken.IsCancellationRequested)
+                    break;
                 _log.Info($"Recording levels for sound device: {device.Settings.CardName}");
-                _audioLevelMeterRecorderService.RecordAudioMeterLevels(device);
+                _audioLevelMeterRecorderService.RecordAudioMeterLevels(device, stoppingToken);
             }
         }
         else
