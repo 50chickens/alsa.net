@@ -18,7 +18,8 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IAudioDeviceBuilder audioDeviceBuilder,
     IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
     ITestToneService testToneService,
-    IAlsaLoopbackTestService loopbackTestService) : BackgroundService
+    IAlsaLoopbackTestService loopbackTestService,
+    ISNRMeasurementService snrMeasurementService) : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
     private readonly SNRReductionServiceOptions _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
@@ -28,7 +29,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
     private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
     private readonly IAlsaLoopbackTestService _loopbackTestService = loopbackTestService ?? throw new ArgumentNullException(nameof(loopbackTestService));
-
+    
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.Trace("SNRReductionWorker starting baseline measurement...");
@@ -64,7 +65,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
                 _log.Info($"Playing test tone on sound device: {device.Settings.CardName}");
                 _testToneService.PlayTestTone(
                     device.Settings.PlaybackDeviceName,
-                    _snrReductionServiceOptions.TestToneFrequencyHz,
+                    _snrReductionServiceOptions.TargetFrequencyHz,
                     _snrReductionServiceOptions.TestToneAmplitudeDbfs,
                     _snrReductionServiceOptions.TestToneLeftChannelDuration,
                     _snrReductionServiceOptions.TestToneRightChannelDuration,
@@ -72,8 +73,21 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
                 );
             }
         }
+        
+        if (_snrReductionServiceOptions.MeasureSNR)
+        {
+            _log.Info("MeasureSNR is true. Measuring SNR...");
+            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+            foreach (ISoundDevice device in _soundDevices)
+            {
+                if (stoppingToken.IsCancellationRequested)
+                    break;
+                _log.Info($"Measuring SNR for sound device: {device.Settings.CardName}");
+                snrMeasurementService.MeasureSNR(device, _snrReductionServiceOptions.TargetFrequencyHz, stoppingToken);
+            }
 
-        if (_snrReductionServiceOptions.MeasureAudioLevels)
+        }
+        if (_snrReductionServiceOptions.MeasureAudioLevels && !_snrReductionServiceOptions.MeasureSNR)
         {
 
             _soundDevices = _audioDeviceBuilder.BuildAudioDevices();

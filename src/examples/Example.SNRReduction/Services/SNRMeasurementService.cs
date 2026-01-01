@@ -1,25 +1,43 @@
+using AlsaSharp;
 using AlsaSharp.Library.Logging;
 using System;
 
 namespace Example.SNRReduction.Services;
 
-public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasurementService
+public class SNRMeasurementService(IAudioRecorderService audioRecorderService, ILog<SNRMeasurementService> log) : ISNRMeasurementService
 {
     private const float RANGE_FACTOR = 0.95f;
     private readonly ILog<SNRMeasurementService> _log = log;
-
-    public SNRAnalysisResult AnalyzeSNR(float[] samples, int sampleRate, double targetFreq, int originalFrames = 0, int originalChannels = 1, int originalBytesPerSample = 0)
+    
+    public readonly IAudioRecorderService _audioRecorderService = audioRecorderService;
+    public void MeasureSNR(ISoundDevice device, int targetFrequencyHz, CancellationToken stoppingToken)
     {
+        //get the audio straight from the level meter recorder service and store it in a float array
+        _log.Info($"Starting SNR analysis for device: {device.Settings.CardName}");
+        var samples = _audioRecorderService.RecordToFloatArray(device, 10000, stoppingToken);
+        _log.Info($"Recorded {samples.Length} samples for SNR analysis.");  
+        var result = MeasureSNRforAudioDevice(samples, device, targetFrequencyHz, samples.Length);
+        _log.Info($"SNR Analysis Result for device {device.Settings.CardName}:");
+        _log.Info($"  Average SNR: {result.AverageSnrDb:F2} dB");
+        _log.Info($"  Clean Sections: {result.CleanSections}");
+        _log.Info($"  Noise Sections: {result.NoiseSections}");
+
+    }
+    
+    public SNRAnalysisResult MeasureSNRforAudioDevice(float[] samples, ISoundDevice device, double targetFrequencyHz, int originalFrames = 0)
+    {
+        var originalChannels = device.Settings.RecordingChannels;
+        var originalBytesPerSample = device.Settings.RecordingBitsPerSample / 8;
+        var sampleRate = (int)device.Settings.RecordingSampleRate;
         if (samples == null) throw new ArgumentNullException(nameof(samples));
         if (sampleRate <= 0) throw new ArgumentException("sampleRate must be > 0", nameof(sampleRate));
-        if (targetFreq <= 0) throw new ArgumentException("targetFreq must be > 0", nameof(targetFreq));
-
-        int nsamples = Math.Max(1, (int)Math.Round((double)sampleRate / targetFreq));
+        if (targetFrequencyHz <= 0) throw new ArgumentException("targetFrequencyHz must be > 0", nameof(targetFrequencyHz));
+        int nsamples = Math.Max(1, (int)Math.Round((double)sampleRate / targetFrequencyHz));
         int nsamplesPerSection = nsamples * 2;
         // number of full sections we can examine (each section needs nsamplesPerSection samples)
         int nsection = samples.Length / nsamplesPerSection;
 
-        _log.Trace($"AnalyzeSNR: samples={samples.Length} sampleRate={sampleRate} targetFreq={targetFreq} nsamples={nsamples} nsamplesPerSection={nsamplesPerSection} nsection={nsection}");
+        _log.Trace($"AnalyzeSNR: samples={samples.Length} sampleRate={sampleRate} targetFreq={targetFrequencyHz} nsamples={nsamples} nsamplesPerSection={nsamplesPerSection} nsection={nsection}");
 
         var sectionSnrs = new List<double>();
         double sumSnrPc = 0.0;
@@ -34,7 +52,7 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
         var target = new double[nsamples];
         for (int i = 0; i < nsamples; i++)
         {
-            target[i] = Math.Sin(2.0 * Math.PI * i * targetFreq / sampleRate) * RANGE_FACTOR;
+            target[i] = Math.Sin(2.0 * Math.PI * i * targetFrequencyHz / sampleRate) * RANGE_FACTOR;
         }
         double tmpAcc = 0.0;
         for (int i = 0; i < nsamples; i++) tmpAcc += target[i] * target[i];
@@ -154,11 +172,11 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
             try
             {
                 int maxHarmonic = 5; // harmonics 2..5
-                double fundamentalPower = GoertzelPower(srcAligned, sampleRate, targetFreq);
+                double fundamentalPower = GoertzelPower(srcAligned, sampleRate, targetFrequencyHz);
                 double harmonicPower = 0.0;
                 for (int h = 2; h <= maxHarmonic; h++)
                 {
-                    double f = targetFreq * h;
+                    double f = targetFrequencyHz * h;
                     if (f >= sampleRate / 2.0) break; // beyond Nyquist
                     harmonicPower += GoertzelPower(srcAligned, sampleRate, f);
                 }
@@ -270,4 +288,5 @@ public class SNRMeasurementService(ILog<SNRMeasurementService> log) : ISNRMeasur
         if (!double.IsFinite(power) || power < 0.0) power = 0.0;
         return power / N;
     }
+
 }
