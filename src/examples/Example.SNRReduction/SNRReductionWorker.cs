@@ -17,7 +17,8 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IHostApplicationLifetime lifetime,
     IAudioDeviceBuilder audioDeviceBuilder,
     IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
-    ITestToneService testToneService) : BackgroundService
+    ITestToneService testToneService,
+    IAlsaLoopbackTestService loopbackTestService) : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
     private readonly SNRReductionServiceOptions _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
@@ -26,10 +27,33 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private readonly IAudioDeviceBuilder _audioDeviceBuilder = audioDeviceBuilder ?? throw new ArgumentNullException(nameof(audioDeviceBuilder));
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
     private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
+    private readonly IAlsaLoopbackTestService _loopbackTestService = loopbackTestService ?? throw new ArgumentNullException(nameof(loopbackTestService));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _log.Trace("SNRReductionWorker starting baseline measurement...");
+
+        if (_snrReductionServiceOptions.TestLoopback)
+        {
+            _log.Info("=== ALSA Loopback Test Mode ===");
+            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+            foreach (ISoundDevice device in _soundDevices)
+            {
+                if (stoppingToken.IsCancellationRequested)
+                    break;
+                _log.Info($"Testing loopback on device: {device.Settings.CardName}");
+                try
+                {
+                    var (playedSignal, recordedSignal, isWorking) = _loopbackTestService.TestLoopback(device, device, 3000);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Loopback test failed: {ex.Message}");
+                }
+            }
+            _lifetime.StopApplication();
+            return;
+        }
 
         if (_snrReductionServiceOptions.GenerateTestTone)
         {

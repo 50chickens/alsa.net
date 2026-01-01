@@ -23,4 +23,5 @@ public class SNRReductionServiceOptions
     public int TestToneSilenceDuration { get; set; } = 2000;
     public int TestToneBothChannelsDuration { get; set; } = 5000;
     public bool VerifyLoopBack { get; set; } = true;
+    public bool TestLoopback { get; set; } = false;
 }

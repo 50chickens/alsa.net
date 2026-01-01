@@ -25,6 +25,7 @@ internal class Program
                 { "--AutoConfigureDaiMux", "SNRReduction:AutoConfigureDaiMux" },
             { "--AudioCardName", "SNRReduction:AudioCardName" },
             { "--ApplyAlsaStateFile", "SNRReduction:ApplyAlsaStateFile" },
+            { "--test-loopback", "SNRReduction:TestLoopback" },
 
         };
 
@@ -46,6 +47,7 @@ internal class Program
         builder.Services.AddSingleton<IAudioInterfaceLevelMeterService, AudioInterfaceLevelMeter>();
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
         builder.Services.AddSingleton<ITestToneService, TestToneService>();
+        builder.Services.AddSingleton<IAlsaLoopbackTestService, AlsaLoopbackTestService>();
 
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         
