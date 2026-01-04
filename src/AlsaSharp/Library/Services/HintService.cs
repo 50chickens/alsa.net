@@ -179,7 +179,8 @@ namespace AlsaSharp.Library.Services
                     h.LongName ,
                     h.IOID ,
                     h.InterfaceType.ToString(),
-                    h.CardIndex
+                    h.CardIndex,
+                    h.Channels
                 ));
             }
             return list;
@@ -262,6 +263,7 @@ namespace AlsaSharp.Library.Services
 
             var control = new Control(cardIndex);
             string longName = string.Empty;
+            int channels = -1;
             try
             {
                 if (cardIndex >= 0)
@@ -273,7 +275,24 @@ namespace AlsaSharp.Library.Services
                 _log.Error(ex, $"HintService: failed to get longname for card {cardIndex}.");
                 longName = string.Empty;
             }
-            return new Hint(name, description, ioid, cardName, cardIndex, deviceIndex, iface, control, longName);
+            
+            // Try to get channel count for PCM devices using the hint name directly
+            if (iface == InterfaceIdentificationType.SND_CTL_ELEM_IFACE_PCM && deviceIndex >= 0)
+            {
+                // Use the hint name to open the device - it's already in the correct format
+                int playbackChannels = GetChannelCountSafeByName(name, snd_pcm_stream_t.SND_PCM_STREAM_PLAYBACK);
+                int captureChannels = GetChannelCountSafeByName(name, snd_pcm_stream_t.SND_PCM_STREAM_CAPTURE);
+                
+                // Use whichever has more channels, or the one that succeeded
+                if (playbackChannels > 0 && captureChannels > 0)
+                    channels = Math.Max(playbackChannels, captureChannels);
+                else if (playbackChannels > 0)
+                    channels = playbackChannels;
+                else if (captureChannels > 0)
+                    channels = captureChannels;
+            }
+            
+            return new Hint(name, description ?? string.Empty, ioid, cardName, cardIndex, deviceIndex, iface, control, longName, channels);
         }
 
         private static bool IsNameValid(string? name) => !string.IsNullOrWhiteSpace(name) && !name!.Equals("null", StringComparison.OrdinalIgnoreCase);
@@ -478,6 +497,105 @@ namespace AlsaSharp.Library.Services
                 return s;
             }
             throw new InvalidOperationException($"Could not get longname for card index {index}");
+        }
+
+        /// <summary>
+        /// Attempts to get the number of channels for a PCM device using the device name.
+        /// Returns -1 if the channel count cannot be determined.
+        /// </summary>
+        private int GetChannelCountSafeByName(string deviceName, snd_pcm_stream_t stream)
+        {
+            try
+            {
+                IntPtr pcmHandle = IntPtr.Zero;
+                
+                if (InteropAlsa.snd_pcm_open(ref pcmHandle, deviceName, stream, 0) < 0)
+                    return -1;
+
+                try
+                {
+                    IntPtr hwParams = IntPtr.Zero;
+                    if (InteropAlsa.snd_pcm_hw_params_malloc(ref hwParams) < 0)
+                        return -1;
+
+                    try
+                    {
+                        if (InteropAlsa.snd_pcm_hw_params_any(pcmHandle, hwParams) < 0)
+                            return -1;
+
+                        unsafe
+                        {
+                            uint channels = 0;
+                            if (InteropAlsa.snd_pcm_hw_params_get_channels(hwParams, &channels) < 0)
+                                return -1;
+                            return (int)channels;
+                        }
+                    }
+                    finally
+                    {
+                        InteropAlsa.snd_pcm_hw_params_free(hwParams);
+                    }
+                }
+                finally
+                {
+                    InteropAlsa.snd_pcm_close(pcmHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, $"GetChannelCountSafeByName failed for device {deviceName}");
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to get the number of channels for a PCM device.
+        /// Returns -1 if the channel count cannot be determined.
+        /// </summary>
+        private int GetChannelCountSafe(int cardIndex, int deviceIndex, snd_pcm_stream_t stream)
+        {
+            try
+            {
+                var pcmName = $"hw:{cardIndex},{deviceIndex}";
+                IntPtr pcmHandle = IntPtr.Zero;
+                
+                if (InteropAlsa.snd_pcm_open(ref pcmHandle, pcmName, stream, 0) < 0)
+                    return -1;
+
+                try
+                {
+                    IntPtr hwParams = IntPtr.Zero;
+                    if (InteropAlsa.snd_pcm_hw_params_malloc(ref hwParams) < 0)
+                        return -1;
+
+                    try
+                    {
+                        if (InteropAlsa.snd_pcm_hw_params_any(pcmHandle, hwParams) < 0)
+                            return -1;
+
+                        unsafe
+                        {
+                            uint channels = 0;
+                            if (InteropAlsa.snd_pcm_hw_params_get_channels(hwParams, &channels) < 0)
+                                return -1;
+                            return (int)channels;
+                        }
+                    }
+                    finally
+                    {
+                        InteropAlsa.snd_pcm_hw_params_free(hwParams);
+                    }
+                }
+                finally
+                {
+                    InteropAlsa.snd_pcm_close(pcmHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, $"GetChannelCountSafe failed for device hw:{cardIndex},{deviceIndex}");
+                return -1;
+            }
         }
     }
 }

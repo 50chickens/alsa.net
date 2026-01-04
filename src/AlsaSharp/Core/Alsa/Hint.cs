@@ -7,7 +7,7 @@ namespace AlsaSharp.Core.Alsa
     public class Hint
     {
         /// <summary>Creates a new <see cref="Hint"/> instance.</summary>
-        public Hint(string name, string description, string ioid, string cardId, int cardIndex, int deviceIndex, InterfaceIdentificationType interfaceType, Control controlInterface, string longName)
+        public Hint(string name, string description, string? ioid, string cardId, int cardIndex, int deviceIndex, InterfaceIdentificationType interfaceType, Control controlInterface, string longName, int channels = -1)
         {
             Name = name;
             Description = description;
@@ -18,6 +18,7 @@ namespace AlsaSharp.Core.Alsa
             InterfaceType = interfaceType;
             ControlInterface = controlInterface;
             LongName = longName;
+            Channels = channels;
         }
 
         /// <summary>The hint name string.</summary>
@@ -25,7 +26,7 @@ namespace AlsaSharp.Core.Alsa
         /// <summary>Description text from the hint.</summary>
         public string Description { get; }
         /// <summary>IOID field if present.</summary>
-        public string IOID { get; }
+        public string? IOID { get; }
         /// <summary>Associated card id.</summary>
         public string CardId { get; }
         /// <summary>Card index.</summary>
@@ -38,6 +39,8 @@ namespace AlsaSharp.Core.Alsa
         public Control ControlInterface { get; }
         /// <summary>Long descriptive name for the card/device.</summary>
         public string LongName { get; }
+        /// <summary>Number of channels for the device, or -1 if unknown.</summary>
+        public int Channels { get; }
         /// <summary>Alias for <see cref="CardId"/> used by some outputs.</summary>
         public string CardName => CardId;
 

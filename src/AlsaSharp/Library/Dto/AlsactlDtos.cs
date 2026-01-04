@@ -175,7 +175,7 @@ public class CtlCardDto(int cardIndex, string id, string name, string longName, 
 /// <summary>
 /// Canonical hint DTO used by the comparison tooling.
 /// </summary>
-public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex, string description, string longName, string ioid, string interfaceType, int controlCardIndex)
+public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex, string description, string longName, string? ioid, string interfaceType, int controlCardIndex, int channels = -1)
 {
     /// <summary>
     /// Raw hint name.
@@ -204,7 +204,7 @@ public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex
     /// <summary>
     /// IOID field from the hint.
     /// </summary>
-    private readonly string _ioid = ioid ?? throw new ArgumentNullException("IOID cannot be null");
+    private readonly string? _ioid = ioid;
     /// <summary>
     /// Interface type string (e.g. "SND_CTL_ELEM_IFACE_PCM").
     /// </summary>
@@ -213,6 +213,10 @@ public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex
     /// Card index used for control operations.
     /// </summary>
     private readonly int _controlCardIndex = controlCardIndex;
+    /// <summary>
+    /// Number of channels for the device, or -1 if unknown.
+    /// </summary>
+    private readonly int _channels = channels;
     /// <summary>
     /// Gets the raw hint name.
     /// </summary>
@@ -240,7 +244,7 @@ public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex
     /// <summary>
     /// Gets the IOID field from the hint.
     /// </summary>
-    public string IOID { get => _ioid; init => _ioid = value ?? throw new ArgumentNullException("IOID cannot be null"); }
+    public string? IOID { get => _ioid; init => _ioid = value; }
     /// <summary>
     /// Gets the interface type string (e.g. "SND_CTL_ELEM_IFACE_PCM").
     /// </summary>
@@ -249,4 +253,7 @@ public class HintDto(string name, string cardId, int cardIndex, int? deviceIndex
     /// Gets the card index used for control operations.
     /// </summary>
     public int ControlCardIndex { get => _controlCardIndex; init => _controlCardIndex = value; }
-}
+    /// <summary>
+    /// Gets the number of channels for the device, or -1 if unknown.
+    /// </summary>
+    public int Channels { get => _channels; init => _channels = value; }}
