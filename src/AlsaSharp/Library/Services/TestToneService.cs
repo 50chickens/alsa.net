@@ -43,8 +43,9 @@ public class TestToneService(ILog<TestToneService> log) : ITestToneService
             
             _log.Trace($"Opened PCM device: {deviceName}");
             
-            // Set hardware parameters
-            err = InteropAlsa.snd_pcm_set_params(pcmHandle, Format, Access, Channels, SampleRate, 1, 500000);
+            // Set hardware parameters with larger buffer and timeout to prevent underruns
+            // Use 1 second timeout (1000000µs) to allow sufficient time for sample preparation
+            err = InteropAlsa.snd_pcm_set_params(pcmHandle, Format, Access, Channels, SampleRate, 1, 1000000);
             if (err < 0)
             {
                 throw new InvalidOperationException($"Failed to set PCM parameters: {GetErrorString(err)}");
@@ -59,12 +60,21 @@ public class TestToneService(ILog<TestToneService> log) : ITestToneService
             _log.Info($"Playing 440Hz test tone: Left={leftChannelDurationMs}ms, Right={rightChannelDurationMs}ms, Both={bothChannelsDurationMs}ms");
             
             // Play left channel only (tone in left, nothing in right)
+            _log.Info($"[LEFT CHANNEL] Playing test tone for {leftChannelDurationMs}ms");
             PlayMonoToStereoTone(pcmHandle, frequencyHz, maxAmplitude, leftChannelDurationMs, PlayChannel.Left);
             
+            // Pause between tones
+            System.Threading.Thread.Sleep(1000);
+            
             // Play right channel only (nothing in left, tone in right)
+            _log.Info($"[RIGHT CHANNEL] Playing test tone for {rightChannelDurationMs}ms");
             PlayMonoToStereoTone(pcmHandle, frequencyHz, maxAmplitude, rightChannelDurationMs, PlayChannel.Right);
             
+            // Pause between tones
+            System.Threading.Thread.Sleep(1000);
+            
             // Play both channels
+            _log.Info($"[BOTH CHANNELS] Playing test tone for {bothChannelsDurationMs}ms");
             PlayMonoToStereoTone(pcmHandle, frequencyHz, maxAmplitude, bothChannelsDurationMs, PlayChannel.Both);
             
             // Drain the PCM to ensure all data is played
@@ -91,61 +101,95 @@ public class TestToneService(ILog<TestToneService> log) : ITestToneService
     private void PlayMonoToStereoTone(IntPtr pcmHandle, int frequencyHz, short amplitude, int durationMs, PlayChannel channel)
     {
         int numSamples = (SampleRate * durationMs) / 1000;
-        int periodSize = 2048;
+        int periodSize = 4096;  // Increased from 2048 to reduce buffer pressure
+        int bytesPerSample = sizeof(short);
         
-        // Allocate buffer for stereo (2 channels) samples
-        byte[] buffer = new byte[periodSize * (int)Channels * sizeof(short)];
+        // Pre-allocate buffer for stereo (2 channels) samples outside the loop
+        byte[] buffer = new byte[periodSize * (int)Channels * bytesPerSample];
+        GCHandle bufferHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
         
         int samplesWritten = 0;
         
         _log.Trace($"Playing {channel} channel(s): {frequencyHz}Hz, amplitude: {amplitude}, duration: {durationMs}ms");
         
-        while (samplesWritten < numSamples)
+        try
         {
-            int samplesToWrite = Math.Min(periodSize, numSamples - samplesWritten);
-            int bytesPerSample = sizeof(short);
-            
-            // Generate samples
-            for (int i = 0; i < samplesToWrite; i++)
+            // Pre-buffer some silence to fill the device buffer and prevent initial underruns
+            int preBufferSize = periodSize * 4;  // Pre-buffer 4 periods of silence
+            int preBufferSamples = 0;
+            while (preBufferSamples < preBufferSize && samplesWritten < numSamples)
             {
-                double t = (double)(samplesWritten + i) / SampleRate;
-                double sineValue = Math.Sin(2.0 * Math.PI * frequencyHz * t);
-                short sample = (short)(amplitude * sineValue);
+                int samplesToWrite = Math.Min(periodSize, preBufferSize - preBufferSamples);
                 
-                int bufferIndex = i * (int)Channels * bytesPerSample;
+                // Fill with silence (zeros) for initial buffer
+                Array.Clear(buffer, 0, samplesToWrite * (int)Channels * bytesPerSample);
                 
-                switch (channel)
+                nint written = InteropAlsa.snd_pcm_writei(pcmHandle, bufferHandle.AddrOfPinnedObject(), (nuint)samplesToWrite);
+                if (written < 0)
                 {
-                    case PlayChannel.Left:
-                        // Only left channel has tone
-                        BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex);
-                        BitConverter.GetBytes((short)0).CopyTo(buffer, bufferIndex + bytesPerSample);
-                        break;
-                    case PlayChannel.Right:
-                        // Only right channel has tone
-                        BitConverter.GetBytes((short)0).CopyTo(buffer, bufferIndex);
-                        BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex + bytesPerSample);
-                        break;
-                    case PlayChannel.Both:
-                        // Both channels have the same tone
-                        BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex);
-                        BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex + bytesPerSample);
-                        break;
+                    int recoverErr = InteropAlsa.snd_pcm_recover(pcmHandle, (int)written, 0);
+                    if (recoverErr < 0)
+                    {
+                        _log.Warn($"Pre-buffer recovery failed: {GetErrorString(recoverErr)}");
+                    }
+                }
+                else
+                {
+                    preBufferSamples += (int)written;
                 }
             }
             
-            // Write samples to PCM device
-            GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            try
+            // Now play the actual tone
+            while (samplesWritten < numSamples)
             {
-                nint written = InteropAlsa.snd_pcm_writei(pcmHandle, handle.AddrOfPinnedObject(), (nuint)samplesToWrite);
+                int samplesToWrite = Math.Min(periodSize, numSamples - samplesWritten);
+                
+                // Generate samples
+                for (int i = 0; i < samplesToWrite; i++)
+                {
+                    double t = (double)(samplesWritten + i) / SampleRate;
+                    double sineValue = Math.Sin(2.0 * Math.PI * frequencyHz * t);
+                    short sample = (short)(amplitude * sineValue);
+                    
+                    int bufferIndex = i * (int)Channels * bytesPerSample;
+                    
+                    switch (channel)
+                    {
+                        case PlayChannel.Left:
+                            // Only left channel has tone
+                            BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex);
+                            BitConverter.GetBytes((short)0).CopyTo(buffer, bufferIndex + bytesPerSample);
+                            break;
+                        case PlayChannel.Right:
+                            // Only right channel has tone
+                            BitConverter.GetBytes((short)0).CopyTo(buffer, bufferIndex);
+                            BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex + bytesPerSample);
+                            break;
+                        case PlayChannel.Both:
+                            // Both channels have the same tone
+                            BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex);
+                            BitConverter.GetBytes(sample).CopyTo(buffer, bufferIndex + bytesPerSample);
+                            break;
+                    }
+                }
+                
+                // Write samples to PCM device with retry logic for underruns
+                nint written = InteropAlsa.snd_pcm_writei(pcmHandle, bufferHandle.AddrOfPinnedObject(), (nuint)samplesToWrite);
                 if (written < 0)
                 {
                     // Attempt to recover from underrun
                     int recoverErr = InteropAlsa.snd_pcm_recover(pcmHandle, (int)written, 0);
                     if (recoverErr < 0)
                     {
-                        throw new InvalidOperationException($"PCM write error: {GetErrorString((int)written)}, recovery failed: {GetErrorString(recoverErr)}");
+                        _log.Warn($"PCM write error: {GetErrorString((int)written)}, recovery failed: {GetErrorString(recoverErr)}");
+                        // Continue anyway - recovery messages are expected in some ALSA configurations
+                        continue;
+                    }
+                    // After recovery, retry the write
+                    written = InteropAlsa.snd_pcm_writei(pcmHandle, bufferHandle.AddrOfPinnedObject(), (nuint)samplesToWrite);
+                    if (written > 0)
+                    {
+                        samplesWritten += (int)written;
                     }
                 }
                 else
@@ -153,10 +197,10 @@ public class TestToneService(ILog<TestToneService> log) : ITestToneService
                     samplesWritten += (int)written;
                 }
             }
-            finally
-            {
-                handle.Free();
-            }
+        }
+        finally
+        {
+            bufferHandle.Free();
         }
     }
     

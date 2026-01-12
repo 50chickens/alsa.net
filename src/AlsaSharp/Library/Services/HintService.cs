@@ -188,8 +188,26 @@ namespace AlsaSharp.Library.Services
         private List<Hint> GetAlsaHints()
         {
             var allHints = new List<Hint>();
-            allHints.AddRange(GetHintsForInterface("pcm"));
-            allHints.AddRange(GetHintsForInterface("ctl"));
+            var interfaces = new[] { "pcm", "ctl", "rawmidi", "timer", "seq", "hwdep", "dmix", "dsnoop", "dshare" };
+            
+            foreach (var iface in interfaces)
+            {
+                try
+                {
+                    var hints = GetHintsForInterface(iface);
+                    if (hints.Count > 0)
+                    {
+                        allHints.AddRange(hints);
+                        _log.Info($"Found {hints.Count} hints for interface: {iface}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Interface has no hints or is not available, skip it
+                    _log.Debug($"No hints available for interface '{iface}': {ex.Message}");
+                }
+            }
+            
             return allHints;
         }
 

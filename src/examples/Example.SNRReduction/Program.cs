@@ -22,11 +22,12 @@ internal class Program
         var switchMappings = new Dictionary<string, string>
         {
             { "--AutoSweep", "SNRReduction:AutoSweep" },
-                { "--AutoConfigureDaiMux", "SNRReduction:AutoConfigureDaiMux" },
             { "--AudioCardName", "SNRReduction:AudioCardName" },
             { "--ApplyAlsaStateFile", "SNRReduction:ApplyAlsaStateFile" },
             { "--test-loopback", "SNRReduction:TestLoopback" },
-
+            { "--test-tone", "SNRReduction:GenerateTestTone" },
+            { "--measure-snr", "SNRReduction:MeasureSNR" },
+            { "--measure-levels", "SNRReduction:MeasureAudioLevels" },
         };
 
         builder.Configuration.AddCommandLine(args, switchMappings);
@@ -58,7 +59,7 @@ internal class Program
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioLevelMeterRecorderServiceOptions>>().Value);
         builder.Services.AddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<AudioCardOptions>>().Value);
         builder.Logging.ClearProviders();
-        builder.Services.AddSNRReductionWorker();
+        builder.Services.AddSNRReductionWorker(args);
         builder.Logging.SetMinimumLevel(LogLevel.Information);
         
         builder.Logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.Warning);
@@ -89,11 +90,12 @@ internal class Program
 
 public static class ServiceExtensions
 {
-    public static IServiceCollection AddSNRReductionWorker(this IServiceCollection services)
+    public static IServiceCollection AddSNRReductionWorker(this IServiceCollection services, string[] args)
     {
         // Worker is registered as a hosted service elsewhere; keep extension minimal.
         services.AddSingleton(typeof(ILog<>), typeof(NLogAdapter<>));
         services.AddSingleton<IValidateOptions<SNRReductionServiceOptions>, SNRReductionOptionsValidationService>();
+        services.AddSingleton(args);
         services.AddSingleton<SNRReductionWorker>();
         return services;
     }

@@ -11,6 +11,7 @@ namespace Example.SNRReduction;
 
 /// <summary>
 /// Hosted worker that runs the baseline measurement and prints results to the console.
+/// Determines test type from command-line arguments and dispatches to appropriate service.
 /// </summary>
 public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IOptions<SNRReductionServiceOptions> options,
@@ -19,7 +20,8 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
     ITestToneService testToneService,
     IAlsaLoopbackTestService loopbackTestService,
-    ISNRMeasurementService snrMeasurementService) : BackgroundService
+    ISNRMeasurementService snrMeasurementService,
+    string[] args) : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
     private readonly SNRReductionServiceOptions _snrReductionServiceOptions = options?.Value ?? new SNRReductionServiceOptions();
@@ -29,81 +31,165 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
     private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
     private readonly IAlsaLoopbackTestService _loopbackTestService = loopbackTestService ?? throw new ArgumentNullException(nameof(loopbackTestService));
+    private readonly ISNRMeasurementService _snrMeasurementService = snrMeasurementService ?? throw new ArgumentNullException(nameof(snrMeasurementService));
+    private readonly string[] _args = args ?? Array.Empty<string>();
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _log.Trace("SNRReductionWorker starting baseline measurement...");
-
-        if (_snrReductionServiceOptions.TestLoopback)
+        try
         {
-            _log.Info("=== ALSA Loopback Test Mode ===");
-            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
-            foreach (ISoundDevice device in _soundDevices)
+            _log.Trace("SNRReductionWorker starting...");
+
+            // Determine test type from command-line arguments
+            var testType = DetermineTestType(_args);
+
+            // Dispatch to appropriate service based on test type
+            switch (testType)
             {
-                if (stoppingToken.IsCancellationRequested)
+                case SNRTestType.GenerateTestTone:
+                    await ExecuteGenerateTestToneAsync(stoppingToken);
                     break;
-                _log.Info($"Testing loopback on device: {device.Settings.CardName}");
-                try
-                {
-                    var (playedSignal, recordedSignal, isWorking) = _loopbackTestService.TestLoopback(device, device, 3000);
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Loopback test failed: {ex.Message}");
-                }
+
+                case SNRTestType.MeasureSNR:
+                    await ExecuteMeasureSNRAsync(stoppingToken);
+                    break;
+
+                case SNRTestType.MeasureAudioLevels:
+                    await ExecuteMeasureAudioLevelsAsync(stoppingToken);
+                    break;
+
+                case SNRTestType.TestLoopback:
+                    await ExecuteTestLoopbackAsync(stoppingToken);
+                    break;
+
+                case SNRTestType.None:
+                default:
+                    _log.Info("No specific test type determined. Running default audio level measurement...");
+                    await ExecuteMeasureAudioLevelsAsync(stoppingToken);
+                    break;
             }
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "Error during SNR reduction worker execution");
+        }
+        finally
+        {
             _lifetime.StopApplication();
-            return;
         }
+    }
 
-        if (_snrReductionServiceOptions.GenerateTestTone)
+    /// <summary>
+    /// Determines the SNR test type from command-line arguments.
+    /// Uses pattern matching on argument strings (--flag format).
+    /// </summary>
+    private SNRTestType DetermineTestType(string[] args)
+    {
+        var argString = string.Join(" ", args);
+
+        return argString switch
         {
-            _log.Info("GenerateTestTone is true. Generating test tone...");
-            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
-            foreach (ISoundDevice device in _soundDevices)
-            {
-                _log.Info($"Playing test tone on sound device: {device.Settings.CardName}");
-                _testToneService.PlayTestTone(
-                    device.Settings.PlaybackDeviceName,
-                    _snrReductionServiceOptions.TargetFrequencyHz,
-                    _snrReductionServiceOptions.TestToneAmplitudeDbfs,
-                    _snrReductionServiceOptions.TestToneLeftChannelDuration,
-                    _snrReductionServiceOptions.TestToneRightChannelDuration,
-                    _snrReductionServiceOptions.TestToneBothChannelsDuration
-                );
-            }
-        }
+            _ when argString.Contains("--test-tone") => SNRTestType.GenerateTestTone,
+            _ when argString.Contains("--measure-snr") => SNRTestType.MeasureSNR,
+            _ when argString.Contains("--measure-levels") => SNRTestType.MeasureAudioLevels,
+            _ when argString.Contains("--test-loopback") => SNRTestType.TestLoopback,
+            _ => SNRTestType.None
+        };
+    }
+
+    /// <summary>
+    /// Executes the test tone generation on all audio devices.
+    /// </summary>
+    private async Task ExecuteGenerateTestToneAsync(CancellationToken stoppingToken)
+    {
+        _log.Info("=== Generating Test Tone ===");
+        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
         
-        if (_snrReductionServiceOptions.MeasureSNR)
+        foreach (ISoundDevice device in _soundDevices)
         {
-            _log.Info("MeasureSNR is true. Measuring SNR...");
-            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
-            foreach (ISoundDevice device in _soundDevices)
-            {
-                if (stoppingToken.IsCancellationRequested)
-                    break;
-                _log.Info($"Measuring SNR for sound device: {device.Settings.CardName}");
-                snrMeasurementService.MeasureSNR(device, _snrReductionServiceOptions.TargetFrequencyHz, stoppingToken);
-            }
+            if (stoppingToken.IsCancellationRequested)
+                break;
 
+            _log.Info($"Playing test tone on sound device: {device.Settings.CardName}");
+            _testToneService.PlayTestTone(
+                device.Settings.PlaybackDeviceName,
+                _snrReductionServiceOptions.TargetFrequencyHz,
+                _snrReductionServiceOptions.TestToneAmplitudeDbfs,
+                _snrReductionServiceOptions.TestToneLeftChannelDuration,
+                _snrReductionServiceOptions.TestToneRightChannelDuration,
+                _snrReductionServiceOptions.TestToneBothChannelsDuration
+            );
         }
-        if (_snrReductionServiceOptions.MeasureAudioLevels && !_snrReductionServiceOptions.MeasureSNR)
-        {
 
-            _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
-            foreach (ISoundDevice device in _soundDevices)
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Executes SNR measurement on all audio devices.
+    /// </summary>
+    private async Task ExecuteMeasureSNRAsync(CancellationToken stoppingToken)
+    {
+        _log.Info("=== Measuring SNR ===");
+        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+        
+        foreach (ISoundDevice device in _soundDevices)
+        {
+            if (stoppingToken.IsCancellationRequested)
+                break;
+
+            _log.Info($"Measuring SNR for sound device: {device.Settings.CardName}");
+            _snrMeasurementService.MeasureSNR(device, _snrReductionServiceOptions.TargetFrequencyHz, stoppingToken);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Executes audio level measurement and recording on all audio devices.
+    /// </summary>
+    private async Task ExecuteMeasureAudioLevelsAsync(CancellationToken stoppingToken)
+    {
+        _log.Info("=== Measuring Audio Levels ===");
+        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+        
+        foreach (ISoundDevice device in _soundDevices)
+        {
+            if (stoppingToken.IsCancellationRequested)
+                break;
+
+            _log.Info($"Recording levels for sound device: {device.Settings.CardName}");
+            _audioLevelMeterRecorderService.RecordAudioMeterLevels(device, stoppingToken);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Executes loopback test on all audio devices.
+    /// </summary>
+    private async Task ExecuteTestLoopbackAsync(CancellationToken stoppingToken)
+    {
+        _log.Info("=== ALSA Loopback Test Mode ===");
+        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+        
+        foreach (ISoundDevice device in _soundDevices)
+        {
+            if (stoppingToken.IsCancellationRequested)
+                break;
+
+            _log.Info($"Testing loopback on device: {device.Settings.CardName}");
+            try
             {
-                if (stoppingToken.IsCancellationRequested)
-                    break;
-                _log.Info($"Recording levels for sound device: {device.Settings.CardName}");
-                _audioLevelMeterRecorderService.RecordAudioMeterLevels(device, stoppingToken);
+                var (playedSignal, recordedSignal, isWorking) = _loopbackTestService.TestLoopback(device, device, 3000);
+                _log.Info($"Loopback test result: {(isWorking ? "SUCCESS" : "FAILED")}");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Loopback test failed: {ex.Message}");
             }
         }
-        else
-        {
-            _log.Info("MeasureAudioLevels is false. Not doing audio level baseline recording.");
-        }
-        _lifetime.StopApplication();
+
+        await Task.CompletedTask;
     }
     
 }
