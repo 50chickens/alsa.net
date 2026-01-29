@@ -60,20 +60,21 @@ internal class AlsaPlaybackDevice : IDisposable
     }
 
     /// <summary>
-    /// Plays audio by calling a callback function to get raw audio data.
-    /// This enables real-time audio streaming without loading entire file into memory.
-    /// Used for pass-through audio operations where data is generated/provided on-demand.
+    /// Plays audio from a blocking queue-based buffer.
+    /// This approach pre-buffers data before starting playback, avoiding ALSA callback timing issues.
+    /// Ideal for real-time pass-through where data arrives from recording.
     /// </summary>
     /// <param name="sampleRate">Sample rate in Hz (e.g., 48000)</param>
     /// <param name="channels">Number of audio channels (e.g., 2 for stereo)</param>
     /// <param name="bitsPerSample">Bits per sample (e.g., 16)</param>
-    /// <param name="onDataNeeded">Callback function that provides audio data. Return 0 bytes to signal end.</param>
+    /// <param name="dataProvider">Function that provides audio data. Returns 0 when no data available (non-blocking).</param>
+    /// <param name="waitMs">How long to wait (ms) for data before returning partial frame</param>
     /// <param name="cancellationToken">Cancellation token to stop playback</param>
-    public void PlayFromCallback(int sampleRate, int channels, int bitsPerSample, 
-        Func<byte[], int> onDataNeeded, CancellationToken cancellationToken)
+    public void c(int sampleRate, int channels, int bitsPerSample,
+        Func<byte[], int> dataProvider, int waitMs, CancellationToken cancellationToken)
     {
-        if (onDataNeeded == null)
-            throw new ArgumentNullException(nameof(onDataNeeded));
+        if (dataProvider == null)
+            throw new ArgumentNullException(nameof(dataProvider));
 
         var header = new WavHeader
         {
@@ -91,7 +92,7 @@ internal class AlsaPlaybackDevice : IDisposable
         try
         {
             _initializer.InitializePcm(_playbackPcm, header, ref parameter, ref dir);
-            WriteAudioFromCallback(header, ref parameter, ref dir, onDataNeeded, cancellationToken);
+            WriteAudioFromQueue(header, ref parameter, ref dir, dataProvider, waitMs, cancellationToken);
         }
         finally
         {
@@ -99,8 +100,8 @@ internal class AlsaPlaybackDevice : IDisposable
         }
     }
 
-    private unsafe void WriteAudioFromCallback(WavHeader header, ref IntPtr @params,
-        ref int dir, Func<byte[], int> onDataNeeded, CancellationToken cancellationToken)
+    private unsafe void WriteAudioFromQueue(WavHeader header, ref IntPtr @params,
+        ref int dir, Func<byte[], int> dataProvider, int waitMs, CancellationToken cancellationToken)
     {
         var frames = AlsaPcmHelper.GetPeriodSize(@params, ref dir, _log);
         var bufferSize = frames * header.BlockAlign;
@@ -110,13 +111,25 @@ internal class AlsaPlaybackDevice : IDisposable
         {
             while (!_disposed && !cancellationToken.IsCancellationRequested)
             {
-                // Call the data provider to get audio samples
-                int bytesProvided = onDataNeeded(writeBuffer);
+                int bytesProvided = 0;
+                int retries = 0;
+                int maxRetries = waitMs; // 1ms per retry, so maxRetries = waitMs retries
+
+                // Keep trying to get data until we have some or timeout
+                while (bytesProvided == 0 && retries < maxRetries && !cancellationToken.IsCancellationRequested)
+                {
+                    bytesProvided = dataProvider(writeBuffer);
+                    if (bytesProvided == 0)
+                    {
+                        System.Threading.Thread.Sleep(1); // Wait 1ms before retry
+                        retries++;
+                    }
+                }
 
                 if (bytesProvided <= 0)
                 {
-                    // No more data available
-                    _log?.Trace("[ALSA] Playback callback returned 0 bytes - stream complete");
+                    // No data available even after waiting
+                    _log?.Trace("[ALSA] PlayFromQueue timeout - no data available, stream complete");
                     break;
                 }
 

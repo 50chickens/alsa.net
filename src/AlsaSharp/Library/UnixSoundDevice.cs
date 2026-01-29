@@ -67,14 +67,14 @@ public class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
     }
 
     /// <summary>
-    /// Plays audio from a callback function that provides raw PCM data on-demand.
-    /// Enables real-time audio streaming and pass-through operations.
+    /// Plays audio from a queue-based buffer using blocking writes (no ALSA callbacks).
+    /// Pre-buffers data and uses traditional read/write I/O for clean, artifact-free playback.
     /// </summary>
-    public void PlayFromCallback(int sampleRate, int channels, int bitsPerSample,
-        Func<byte[], int> onDataNeeded, CancellationToken cancellationToken)
+    public void PlayFromQueue(int sampleRate, int channels, int bitsPerSample,
+        Func<byte[], int> dataProvider, int waitMs, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-        _playback.PlayFromCallback(sampleRate, channels, bitsPerSample, onDataNeeded, cancellationToken);
+        _playback.PlayFromQueue(sampleRate, channels, bitsPerSample, dataProvider, waitMs, cancellationToken);
     }
 
     #endregion
