@@ -51,6 +51,7 @@ internal class Program
         builder.Services.AddSingleton<IAudioRecorderService, AudioRecorderService>();
         builder.Services.AddSingleton<ISNRMeasurementService, SNRMeasurementService>();
         builder.Services.AddSingleton<ITestToneService, TestToneService>();
+        builder.Services.AddSingleton<ICopyOnlyService, CopyOnlyService>();
 
         var snrSection = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
         
@@ -70,8 +71,7 @@ internal class Program
 
         builder.Services.AddAudioService(options =>
         {
-            var snrOptions = builder.Configuration.GetSection(SNRReductionServiceOptions.Settings);
-
+            // Audio service options are configured via dependency injection
         });
         
        builder.Logging.AddNLog().AddNLogConfiguration().AddNlogFactoryAdaptor();

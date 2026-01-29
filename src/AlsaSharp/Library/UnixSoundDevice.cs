@@ -66,6 +66,17 @@ public class UnixSoundDevice(SoundDeviceSettings settings) : ISoundDevice
         _playback.Play(wavStream, cancellationToken);
     }
 
+    /// <summary>
+    /// Plays audio from a callback function that provides raw PCM data on-demand.
+    /// Enables real-time audio streaming and pass-through operations.
+    /// </summary>
+    public void PlayFromCallback(int sampleRate, int channels, int bitsPerSample,
+        Func<byte[], int> onDataNeeded, CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        _playback.PlayFromCallback(sampleRate, channels, bitsPerSample, onDataNeeded, cancellationToken);
+    }
+
     #endregion
 
     #region Recording Methods

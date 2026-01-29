@@ -21,6 +21,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     ITestToneService testToneService,
     IAlsaLoopbackTestService loopbackTestService,
     ISNRMeasurementService snrMeasurementService,
+    ICopyOnlyService copyOnlyService,
     string[] args) : BackgroundService
 {
     private readonly ILog<SNRReductionWorker> _log = log ?? throw new ArgumentNullException(nameof(log));
@@ -32,6 +33,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
     private readonly IAlsaLoopbackTestService _loopbackTestService = loopbackTestService ?? throw new ArgumentNullException(nameof(loopbackTestService));
     private readonly ISNRMeasurementService _snrMeasurementService = snrMeasurementService ?? throw new ArgumentNullException(nameof(snrMeasurementService));
+    private readonly ICopyOnlyService _copyOnlyService = copyOnlyService ?? throw new ArgumentNullException(nameof(copyOnlyService));
     private readonly string[] _args = args ?? Array.Empty<string>();
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,7 +63,9 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
                 case SNRTestType.TestLoopback:
                     await ExecuteTestLoopbackAsync(stoppingToken);
                     break;
-
+                case SNRTestType.CopyOnly:
+                    await ExecuteCopyOnlyAsync(stoppingToken);
+                    break;
                 case SNRTestType.None:
                 default:
                     _log.Info("No specific test type determined. Running default audio level measurement...");
@@ -93,6 +97,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             _ when argString.Contains("--measure-snr") => SNRTestType.MeasureSNR,
             _ when argString.Contains("--measure-levels") => SNRTestType.MeasureAudioLevels,
             _ when argString.Contains("--test-loopback") => SNRTestType.TestLoopback,
+            _ when argString.Contains("--copy-only") => SNRTestType.CopyOnly,
             _ => SNRTestType.None
         };
     }
@@ -186,6 +191,35 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             catch (Exception ex)
             {
                 _log.Error($"Loopback test failed: {ex.Message}");
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Executes copy-only test on all audio devices.
+    /// Copies incoming audio from input channels 1/2 to output channels 1/2.
+    /// </summary>
+    private async Task ExecuteCopyOnlyAsync(CancellationToken stoppingToken)
+    {
+        _log.Info("=== Copy-Only Test Mode ===");
+        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
+        
+        foreach (ISoundDevice device in _soundDevices)
+        {
+            if (stoppingToken.IsCancellationRequested)
+                break;
+
+            _log.Info($"Executing copy-only test on device: {device.Settings.CardName}");
+            try
+            {
+                _copyOnlyService.CopyAudioChannels(device, 5000, stoppingToken);
+                _log.Info("Copy-only test completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Copy-only test failed: {ex.Message}");
             }
         }
 

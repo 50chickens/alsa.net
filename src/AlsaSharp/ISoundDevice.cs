@@ -60,6 +60,18 @@ public interface ISoundDevice : IDisposable
     void Play(Stream wavStream, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Play audio by calling a callback function to get raw PCM data on-demand.
+    /// Enables real-time audio streaming and pass-through operations without buffering entire audio.
+    /// </summary>
+    /// <param name="sampleRate">Sample rate in Hz (e.g., 48000)</param>
+    /// <param name="channels">Number of audio channels (e.g., 2 for stereo)</param>
+    /// <param name="bitsPerSample">Bits per sample (e.g., 16)</param>
+    /// <param name="onDataNeeded">Callback that provides audio data. Return number of bytes provided, or 0 to end playback.</param>
+    /// <param name="cancellationToken">token to stop playback</param>
+    void PlayFromCallback(int sampleRate, int channels, int bitsPerSample,
+        Func<byte[], int> onDataNeeded, CancellationToken cancellationToken);
+
+    /// <summary>
     /// record a wav file to the given path and length 
     /// </summary>
     /// <param name="second">recording duration in seconds</param>

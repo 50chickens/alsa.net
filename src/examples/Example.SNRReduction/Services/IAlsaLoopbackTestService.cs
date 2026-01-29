@@ -23,6 +23,7 @@ public class AlsaLoopbackTestResult
     public List<double> ChannelRms { get; set; } = new();
     public List<double> PeakAmplitude { get; set; } = new();
     public double SignalToNoiseRatio { get; set; } // SNR in dB
+    public double TotalHarmonicDistortionDb { get; set; } // THD in dB
     public bool HasSignal { get; set; }
     
     public override string ToString()
@@ -30,6 +31,7 @@ public class AlsaLoopbackTestResult
         var dbfsStr = string.Join(", ", ChannelDbfs.Select(d => $"{d:F1}dB"));
         var rmsStr = string.Join(", ", ChannelRms.Select(r => $"{r:F6}"));
         var peakStr = string.Join(", ", PeakAmplitude.Select(p => $"{p:F6}"));
-        return $"Samples: {Samples}, dBFS: [{dbfsStr}], RMS: [{rmsStr}], Peak: [{peakStr}], SNR: {SignalToNoiseRatio:F1}dB, Signal: {(HasSignal ? "Yes" : "No")}";
+        var thdStr = double.IsFinite(TotalHarmonicDistortionDb) ? $", THD: {TotalHarmonicDistortionDb:F1}dB" : "";
+        return $"Samples: {Samples}, dBFS: [{dbfsStr}], RMS: [{rmsStr}], Peak: [{peakStr}], SNR: {SignalToNoiseRatio:F1}dB{thdStr}, Signal: {(HasSignal ? "Yes" : "No")}";
     }
 }

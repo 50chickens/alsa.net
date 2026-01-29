@@ -28,5 +28,10 @@ public enum SNRTestType
     /// <summary>
     /// Test loopback functionality.
     /// </summary>
-    TestLoopback = 4
+    TestLoopback = 4,
+
+    /// <summary>
+    /// Copy audio from input channels 1/2 to output channels 1/2.
+    /// </summary>
+    CopyOnly = 5
 }
