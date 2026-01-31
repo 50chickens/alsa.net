@@ -30,7 +30,10 @@ internal class Program
             { "--measure-levels", "SNRReduction:MeasureAudioLevels" },
         };
 
-        builder.Configuration.AddCommandLine(args, switchMappings);
+        var filteredArgs = args.Where(arg => 
+            !arg.StartsWith("--loopback-test-card=", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        builder.Configuration.AddCommandLine(filteredArgs, switchMappings);
         builder.Services.AddOptions<SNRReductionServiceOptions>().Bind(builder.Configuration.GetSection(SNRReductionServiceOptions.Settings));
         builder.Services.AddOptions<AudioLevelMeterRecorderServiceOptions>().Bind(builder.Configuration.GetSection(AudioLevelMeterRecorderServiceOptions.Settings));
         builder.Services.AddOptions<AudioCardOptions>().Bind(builder.Configuration.GetSection(AudioCardOptions.Settings));
@@ -45,6 +48,7 @@ internal class Program
         builder.Services.AddSingleton<HintService>();
         builder.Services.AddSingleton<IHintService>(sp => sp.GetRequiredService<HintService>());
         builder.Services.AddSingleton<IAudioDeviceBuilder, AudioDeviceBuilder>();
+        builder.Services.AddSingleton<IAudioCardSelector, AudioCardSelector>();
         builder.Services.AddSingleton<IAudioInterfaceLevelMeterService, AudioInterfaceLevelMeter>();
         builder.Services.AddSingleton<IAudioLevelMeterRecorderService, AudioLevelMeterRecorderService>();
         builder.Services.AddSingleton<IAlsaLoopbackTestService, AlsaLoopbackTestService>();

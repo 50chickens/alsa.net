@@ -17,6 +17,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     IOptions<SNRReductionServiceOptions> options,
     IHostApplicationLifetime lifetime,
     IAudioDeviceBuilder audioDeviceBuilder,
+    IAudioCardSelector cardSelector,
     IAudioLevelMeterRecorderService audioLevelMeterRecorderService,
     ITestToneService testToneService,
     IAlsaLoopbackTestService loopbackTestService,
@@ -29,6 +30,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private IEnumerable<ISoundDevice> _soundDevices = Enumerable.Empty<ISoundDevice>();
     private readonly IHostApplicationLifetime _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     private readonly IAudioDeviceBuilder _audioDeviceBuilder = audioDeviceBuilder ?? throw new ArgumentNullException(nameof(audioDeviceBuilder));
+    private readonly IAudioCardSelector _cardSelector = cardSelector ?? throw new ArgumentNullException(nameof(cardSelector));
     private readonly IAudioLevelMeterRecorderService _audioLevelMeterRecorderService = audioLevelMeterRecorderService ?? throw new ArgumentNullException(nameof(audioLevelMeterRecorderService));
     private readonly ITestToneService _testToneService = testToneService ?? throw new ArgumentNullException(nameof(testToneService));
     private readonly IAlsaLoopbackTestService _loopbackTestService = loopbackTestService ?? throw new ArgumentNullException(nameof(loopbackTestService));
@@ -96,7 +98,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             _ when argString.Contains("--test-tone") => SNRTestType.GenerateTestTone,
             _ when argString.Contains("--measure-snr") => SNRTestType.MeasureSNR,
             _ when argString.Contains("--measure-levels") => SNRTestType.MeasureAudioLevels,
-            _ when argString.Contains("--test-loopback") => SNRTestType.TestLoopback,
+            _ when CommandLineParser.HasArgument(args, "test-loopback") => SNRTestType.TestLoopback,
             _ when argString.Contains("--copy-only") => SNRTestType.CopyOnly,
             _ => SNRTestType.None
         };
@@ -175,22 +177,40 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
     private async Task ExecuteTestLoopbackAsync(CancellationToken stoppingToken)
     {
         _log.Info("=== ALSA Loopback Test Mode ===");
-        _soundDevices = _audioDeviceBuilder.BuildAudioDevices();
         
-        foreach (ISoundDevice device in _soundDevices)
+        var allDevices = _audioDeviceBuilder.BuildAudioDevices();
+        var cardSelector = CommandLineParser.GetArgumentValue(_args, "loopback-test-card") 
+                          ?? CommandLineParser.GetArgumentValue(_args, "test-loopback");
+        
+        _soundDevices = string.IsNullOrWhiteSpace(cardSelector) 
+            ? allDevices 
+            : _cardSelector.SelectCards(allDevices, cardSelector);
+
+        var deviceList = _soundDevices.ToList();
+        
+        if (!deviceList.Any())
+        {
+            _log.Error("No audio devices found matching the specified criteria");
+            return;
+        }
+
+        _log.Info($"Testing {deviceList.Count} device(s)");
+        
+        foreach (var device in deviceList)
         {
             if (stoppingToken.IsCancellationRequested)
                 break;
 
-            _log.Info($"Testing loopback on device: {device.Settings.CardName}");
+            _log.Info($"Testing card #{deviceList.IndexOf(device)}: {device.Settings.CardName}");
+            
             try
             {
                 var (playedSignal, recordedSignal, isWorking) = _loopbackTestService.TestLoopback(device, device, 3000);
-                _log.Info($"Loopback test result: {(isWorking ? "SUCCESS" : "FAILED")}");
+                _log.Info($"Result: {(isWorking ? "SUCCESS" : "FAILED")}");
             }
             catch (Exception ex)
             {
-                _log.Error($"Loopback test failed: {ex.Message}");
+                _log.Error($"Loopback test failed for {device.Settings.CardName}: {ex.Message}");
             }
         }
 
