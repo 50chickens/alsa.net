@@ -182,6 +182,15 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
         var cardSelector = CommandLineParser.GetArgumentValue(_args, "loopback-test-card") 
                           ?? CommandLineParser.GetArgumentValue(_args, "test-loopback");
         
+        var testLevelStr = CommandLineParser.GetArgumentValue(_args, "loopback-test-level");
+        double testLevelDbfs = -12.0;
+        
+        if (!string.IsNullOrWhiteSpace(testLevelStr) && double.TryParse(testLevelStr, out double parsedLevel))
+        {
+            testLevelDbfs = parsedLevel;
+            _log.Info($"Using test level: {testLevelDbfs:F1} dBFS");
+        }
+        
         _soundDevices = string.IsNullOrWhiteSpace(cardSelector) 
             ? allDevices 
             : _cardSelector.SelectCards(allDevices, cardSelector);
@@ -205,7 +214,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             
             try
             {
-                var (playedSignal, recordedSignal, isWorking) = _loopbackTestService.TestLoopback(device, device, 3000);
+                var (playedSignal, recordedSignal, isWorking, fullResult) = _loopbackTestService.TestLoopback(device, device, 3000, testLevelDbfs);
                 _log.Info($"Result: {(isWorking ? "SUCCESS" : "FAILED")}");
             }
             catch (Exception ex)

@@ -31,12 +31,14 @@ internal class Program
         };
 
         var filteredArgs = args.Where(arg => 
-            !arg.StartsWith("--loopback-test-card=", StringComparison.OrdinalIgnoreCase)).ToArray();
+            !arg.StartsWith("--loopback-test-card=", StringComparison.OrdinalIgnoreCase) &&
+            !arg.StartsWith("--loopback-test-level=", StringComparison.OrdinalIgnoreCase)).ToArray();
 
         builder.Configuration.AddCommandLine(filteredArgs, switchMappings);
         builder.Services.AddOptions<SNRReductionServiceOptions>().Bind(builder.Configuration.GetSection(SNRReductionServiceOptions.Settings));
         builder.Services.AddOptions<AudioLevelMeterRecorderServiceOptions>().Bind(builder.Configuration.GetSection(AudioLevelMeterRecorderServiceOptions.Settings));
         builder.Services.AddOptions<AudioCardOptions>().Bind(builder.Configuration.GetSection(AudioCardOptions.Settings));
+        builder.Services.AddOptions<LoopbackTestOptions>().Bind(builder.Configuration.GetSection(LoopbackTestOptions.Settings));
         builder.Services.AddSingleton(new ControlSweepOptions(new List<AlsaControl>()));
 
         // Register logger first so it's available for all other services

@@ -1,6 +1,7 @@
 #nullable enable
 
 using AlsaSharp;
+using Example.SNRReduction.Models;
 
 namespace Example.SNRReduction.Services;
 
@@ -8,12 +9,13 @@ public interface IAlsaLoopbackTestService
 {
     /// <summary>
     /// Tests ALSA loopback by simultaneously playing a test tone and recording it.
-    /// Returns tuple of (PlayedSignalStats, RecordedSignalStats, IsLoopbackWorking)
+    /// Returns tuple of (PlayedSignalStats, RecordedSignalStats, IsLoopbackWorking, FullResult)
     /// </summary>
-    (AlsaLoopbackTestResult PlayedSignal, AlsaLoopbackTestResult RecordedSignal, bool IsLoopbackWorking) TestLoopback(
+    (AlsaLoopbackTestResult PlayedSignal, AlsaLoopbackTestResult RecordedSignal, bool IsLoopbackWorking, LoopbackTestResult FullResult) TestLoopback(
         ISoundDevice playbackDevice, 
         ISoundDevice recordingDevice, 
-        int testDurationMs = 3000);
+        int testDurationMs = 3000,
+        double testLevelDbfs = -12.0);
 }
 
 public class AlsaLoopbackTestResult
