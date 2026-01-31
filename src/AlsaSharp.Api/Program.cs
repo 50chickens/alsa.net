@@ -36,7 +36,7 @@ builder.Services.AddCors(options =>
 });
 
 // Add custom services
-builder.Services.AddOperations();
+builder.Services.AddOperations(builder.Configuration);
 builder.Services.AddApiServices();
 
 // Add problem details

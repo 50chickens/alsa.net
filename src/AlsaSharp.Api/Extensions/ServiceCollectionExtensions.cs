@@ -6,13 +6,13 @@ namespace AlsaSharp.Api.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddOperations(this IServiceCollection services)
+    public static IServiceCollection AddOperations(this IServiceCollection services, IConfiguration configuration)
     {
         // Register logging adapter
         services.AddSingleton(typeof(ILog<>), typeof(LoggerAdapter<>));
         
         // Configure options
-        services.Configure<LoopbackTestOptions>(options => { });
+        services.Configure<LoopbackTestOptions>(configuration.GetSection(LoopbackTestOptions.Settings));
         services.AddSingleton(sp => new AudioLevelMeterRecorderServiceOptions());
         
         // Register all operation services as scoped
