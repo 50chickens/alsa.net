@@ -21,14 +21,17 @@ public class TestToneOperation(ILog<TestToneOperation> logger, ITestToneService 
             }
             
             // Execute test tone playback
+            // NOTE: TestToneService plays tones on left, right, and both channels sequentially
+            // Currently using the same duration for all three phases
+            // TODO: Consider updating TestToneRequest to include separate durations for each channel
             await Task.Run(() => 
                 testToneService.PlayTestTone(
                     deviceName, 
                     request.FrequencyHz, 
                     request.AmplitudeDbfs, 
-                    request.DurationMs, 
-                    request.DurationMs, 
-                    request.DurationMs
+                    request.DurationMs,  // Left channel duration
+                    request.DurationMs,  // Right channel duration
+                    request.DurationMs   // Both channels duration
                 ), 
                 cancellationToken);
             

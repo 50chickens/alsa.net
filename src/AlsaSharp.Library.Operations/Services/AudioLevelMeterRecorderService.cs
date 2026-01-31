@@ -58,7 +58,13 @@ public class AudioLevelMeterRecorderService(ILog<AudioLevelMeterRecorderService>
 
     private (List<double>? channelDbfs, List<double>? channelRms) MeasureLevels(ISoundDevice device, int durationMs, CancellationToken cancellationToken)
     {
-        // Simple level measurement implementation
+        // TODO: Implement actual audio level measurement using device recording
+        // This is a placeholder implementation that should be replaced with proper level detection
+        // The actual implementation should:
+        // 1. Record audio from the device for the specified duration
+        // 2. Analyze the recorded samples to calculate RMS and dBFS values per channel
+        // 3. Return the actual measured values instead of placeholders
+        
         var channelCount = device.Settings.RecordingChannels;
         var channelDbfs = new List<double>();
         var channelRms = new List<double>();

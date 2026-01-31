@@ -1,20 +1,21 @@
 using AlsaSharp;
 
 namespace AlsaSharp.Library.Operations.Services;
-public class Accumulator
-    {
-        private readonly ISoundDevice _device;
-        public List<long> SumSq = new List<long>();
-        public int Samples;
-        private bool _headerSeen;
 
-        public Accumulator(ISoundDevice device)
-        {
-            _device = device;
-            SumSq = new List<long>();
-            Samples = 0;
-            _headerSeen = false;
-        }
+public class Accumulator
+{
+    private readonly ISoundDevice _device;
+    public List<long> SumSq = new List<long>();
+    public int Samples;
+    private bool _headerSeen;
+
+    public Accumulator(ISoundDevice device)
+    {
+        _device = device;
+        SumSq = new List<long>();
+        Samples = 0;
+        _headerSeen = false;
+    }
 
         public void OnData(byte[] buffer)
         {
