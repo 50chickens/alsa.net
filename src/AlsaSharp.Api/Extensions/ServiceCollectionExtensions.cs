@@ -13,7 +13,14 @@ public static class ServiceCollectionExtensions
         
         // Configure options
         services.Configure<LoopbackTestOptions>(configuration.GetSection(LoopbackTestOptions.Settings));
-        services.AddSingleton(sp => new AudioLevelMeterRecorderServiceOptions());
+        services.Configure<AudioLevelMeterRecorderServiceOptions>(configuration.GetSection("AudioLevelMeter"));
+        services.AddSingleton(sp => 
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var options = new AudioLevelMeterRecorderServiceOptions();
+            config.GetSection("AudioLevelMeter").Bind(options);
+            return options;
+        });
         
         // Register all operation services as scoped
         services.AddScoped<ILoopbackTestOperation, LoopbackTestOperation>();
