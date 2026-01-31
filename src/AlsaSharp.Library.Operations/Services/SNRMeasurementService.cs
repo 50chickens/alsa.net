@@ -7,8 +7,7 @@ public class SNRMeasurementService(IAudioRecorderService audioRecorderService, I
 {
     private const float RANGE_FACTOR = 0.95f;
     private readonly ILog<SNRMeasurementService> _log = log;
-    
-    public readonly IAudioRecorderService _audioRecorderService = audioRecorderService;
+    private readonly IAudioRecorderService _audioRecorderService = audioRecorderService;
     public void MeasureSNR(ISoundDevice device, int targetFrequencyHz, CancellationToken stoppingToken)
     {
         //get the audio straight from the level meter recorder service and store it in a float array
@@ -253,8 +252,7 @@ public class SNRMeasurementService(IAudioRecorderService audioRecorderService, I
             AverageSignalDb = avgSignalDb,
             AverageNoiseDb = avgNoiseDb,
             AverageOutputDb = avgOutputDb,
-            TotalHarmonicDistortionDb = avgThdDb
-            ,
+            TotalHarmonicDistortionDb = avgThdDb,
             AverageSnrUnit = "decibels (dB)",
             SectionSnrUnit = "decibels (dB)",
             FramesUnit = "frames",

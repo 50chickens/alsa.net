@@ -17,10 +17,13 @@ public class Accumulator
         _headerSeen = false;
     }
 
-        public void OnData(byte[] buffer)
+    public void OnData(byte[] buffer)
+    {
+        if (!_headerSeen)
         {
-            if (!_headerSeen)
-            { _headerSeen = true; return; }
+            _headerSeen = true;
+            return;
+        }
 
             int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
             int bytesPerSample = Math.Max(1, bitsPerSample / 8);
@@ -64,65 +67,7 @@ public class Accumulator
                 Samples++;
             }
         }
-        public void OnData2(byte[] buffer)
-        {
-            if (buffer == null || buffer.Length == 0)
-                return;
-
-            int bitsPerSample = (int)(_device?.Settings?.RecordingBitsPerSample ?? (uint)16);
-            int bytesPerSample = Math.Max(1, bitsPerSample / 8);
-            int channels = (int)(_device?.Settings?.RecordingChannels ?? (uint)2);
-
-            if (channels <= 0)
-                channels = 1;
-
-            int frameCount = buffer.Length / (bytesPerSample * channels);
-            if (frameCount <= 0)
-                return;
-            
-            // ensure SumSq list capacity
-            while (SumSq.Count < channels)
-                SumSq.Add(0);
-            
-            for (int i = 0; i < frameCount; i++)
-            {
-                int offset = i * channels * bytesPerSample;
-                if (offset + (channels * bytesPerSample) > buffer.Length)
-                    break;
-
-                // read all channels generically
-                for (int ch = 0; ch < channels; ch++)
-                {
-                    int so = offset + ch * bytesPerSample;
-                    if (so + bytesPerSample > buffer.Length)
-                        break;
-                    
-                    long sample = 0;
-                    if (bytesPerSample == 3)
-                    {
-                        // 24-bit signed integer (little-endian)
-                        int v = buffer[so] | (buffer[so + 1] << 8) | (buffer[so + 2] << 16);
-                        if ((v & 0x800000) != 0)
-                            v |= unchecked((int)0xFF000000);
-                        sample = v;
-                    }
-                    else if (bytesPerSample == 4)
-                    {
-                        sample = BitConverter.ToInt32(buffer, so);
-                    }
-                    else // bytesPerSample == 2 or 1
-                    {
-                        sample = BitConverter.ToInt16(buffer, so);
-                    }
-                    
-                    SumSq[ch] += sample * sample;
-                }
-            }
-            
-            // Samples represents the number of samples per channel
-            Samples += frameCount;
-        }
-        public (List<double> ChannelDbfs, List<double> ChannelRms) ComputeResults()
+    public (List<double> ChannelDbfs, List<double> ChannelRms) ComputeResults()
         {
             if (Samples == 0)
             {
