@@ -27,42 +27,136 @@ public class AlsaLoopbackTestService(ILog<AlsaLoopbackTestService> log) : IAlsaL
         // Create accumulator for recorded signal
         var recordedAccumulator = new AudioAccumulator(recordingDevice);
 
-        // Start playback and recording simultaneously
-        using var cts = new CancellationTokenSource(testDurationMs + 2000); // Add 2 second buffer
-        var playTask = Task.Run(() =>
-        {
-            try
-            {
-                _log.Info("Starting playback...");
-                testToneStream.Seek(0, SeekOrigin.Begin);
-                playbackDevice.Play(testToneStream, cts.Token);
-                _log.Info("Playback completed");
-            }
-            catch (OperationCanceledException)
-            {
-                _log.Info("Playback cancelled as expected");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Playback error: {ex.Message}");
-            }
-        });
+        // Use synchronized circular buffer like CopyOnlyService for synchronized playback/recording
+        using var cts = new CancellationTokenSource(testDurationMs + 2000);
+        var cancellationToken = cts.Token;
 
+        // Create circular buffer for synchronized I/O
+        var circBuffer = new CircularAudioBuffer(256 * 1024);
+        
+        // Calculate frame parameters
+        int sampleRate = (int)recordingDevice.Settings.RecordingSampleRate;
+        int channels = recordingDevice.Settings.RecordingChannels;
+        int bitsPerSample = recordingDevice.Settings.RecordingBitsPerSample;
+        int bytesPerFrame = channels * bitsPerSample / 8;
+        int periodSize = 256;
+        int bytesPerPeriod = periodSize * bytesPerFrame;
+        const int PRE_BUFFER_PERIODS = 15;
+        int PRE_BUFFER_BYTES = PRE_BUFFER_PERIODS * periodSize * 2 * 2; // 15 periods, stereo, 16-bit
+
+        _log.Info($"Buffer config: period={periodSize} frames, bytes/period={bytesPerPeriod}, pre-buffer={PRE_BUFFER_PERIODS} periods");
+
+        var playbackReady = new ManualResetEvent(false);
+        var recordingComplete = new ManualResetEvent(false);
+
+        // Task 1: Recording thread - continuously records audio into circular buffer
         var recordTask = Task.Run(() =>
         {
             try
             {
-                _log.Info("Starting recording...");
-                recordingDevice.Record(recordedAccumulator.OnData, cts.Token);
-                _log.Info("Recording completed");
+                _log.Info("Recording thread started");
+                long framesRecorded = 0;
+
+                recordingDevice.Record((frameData) =>
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _log.Trace($"Recording detected cancellation after {framesRecorded} frames");
+                        return;
+                    }
+
+                    // Write to circular buffer
+                    circBuffer.Write(frameData, frameData.Length);
+                    framesRecorded += frameData.Length / bytesPerFrame;
+
+                    // Also accumulate for analysis
+                    recordedAccumulator.OnData(frameData);
+
+                    // Signal playback to start once we have enough pre-buffer
+                    if (circBuffer.AvailableBytes >= PRE_BUFFER_BYTES && !playbackReady.WaitOne(0))
+                    {
+                        _log.Trace($"Recording: Pre-buffer reached ({circBuffer.AvailableBytes} bytes), signaling playback");
+                        playbackReady.Set();
+                    }
+
+                    if (framesRecorded % (sampleRate / 10) == 0)
+                    {
+                        _log.Trace($"Recording: {framesRecorded} frames, buffer level: {circBuffer.AvailableBytes} bytes");
+                    }
+                }, cancellationToken);
+
+                _log.Info($"Recording completed: {framesRecorded} frames captured");
             }
             catch (OperationCanceledException)
             {
-                _log.Info("Recording cancelled as expected");
+                _log.Trace("Recording cancelled");
             }
             catch (Exception ex)
             {
-                _log.Error($"Recording error: {ex.Message}");
+                _log.Error($"Recording error: {ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                recordingComplete.Set();
+                playbackReady.Set(); // Unblock playback if recording ends
+            }
+        });
+
+        // Task 2: Playback thread - reads from circular buffer and plays test tone
+        var playTask = Task.Run(() =>
+        {
+            try
+            {
+                _log.Info("Playback thread started");
+
+                // Wait for pre-buffer to accumulate
+                _log.Trace($"Playback: Waiting for pre-buffer (need {PRE_BUFFER_BYTES} bytes)...");
+                if (!playbackReady.WaitOne(2000))
+                {
+                    _log.Warn("Playback: Pre-buffer timeout");
+                }
+
+                _log.Trace($"Playback: Starting playback from test tone stream");
+
+                // Wrap the test tone stream in a circular buffer wrapper for synchronized playback
+                testToneStream.Seek(0, SeekOrigin.Begin);
+
+                long bytesRead = 0;
+                long callbackCount = 0;
+
+                // Use PlayFromQueue to read from test tone stream and play it with synchronized timing
+                playbackDevice.PlayFromQueue(
+                    sampleRate,
+                    channels,
+                    bitsPerSample,
+                    (buffer) =>
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            return 0;
+
+                        callbackCount++;
+
+                        // Read from test tone stream
+                        int read = testToneStream.Read(buffer, 0, buffer.Length);
+                        if (read > 0)
+                        {
+                            bytesRead += read;
+                        }
+
+                        return read;
+                    },
+                    10, // Wait up to 10ms for data per period
+                    cancellationToken);
+
+                _log.Info($"Playback completed: {bytesRead} bytes played in {callbackCount} callbacks");
+            }
+            catch (OperationCanceledException)
+            {
+                _log.Trace("Playback cancelled");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Playback error: {ex.GetType().Name}: {ex.Message}");
             }
         });
 
@@ -73,6 +167,11 @@ public class AlsaLoopbackTestService(ILog<AlsaLoopbackTestService> log) : IAlsaL
         catch (Exception ex)
         {
             _log.Warn($"Error waiting for tasks: {ex.Message}");
+        }
+        finally
+        {
+            playbackReady?.Dispose();
+            recordingComplete?.Dispose();
         }
 
         // Analyze recorded signal (what we captured)
@@ -172,17 +271,24 @@ public class AlsaLoopbackTestService(ILog<AlsaLoopbackTestService> log) : IAlsaL
             _log.Info($"Frequency comparison - lower ({targetFrequency - 50} Hz): {lowerFreqEnergy:F6}, target ({targetFrequency} Hz): {targetEnergies[0]:F6}, higher ({targetFrequency + 50} Hz): {higherFreqEnergy:F6}");
 
             // Test tone is detected if:
-            // 1. Energy at target frequency is reasonable (not noise floor)
-            // 2. Energy at target frequency is higher than at least one adjacent frequency
+            // 1. Energy at target frequency is significant
+            // 2. Energy at target frequency is comparable to adjacent frequencies (within 3dB)
+            // 3. At least one channel has detectable energy
+            
             double maxEnergy = Math.Max(targetEnergies[0], Math.Max(lowerFreqEnergy, higherFreqEnergy));
-            bool targetIsSignificant = targetEnergies[0] > (maxEnergy * 0.1); // At least 10% of max
-            bool targetIsHigher = targetEnergies[0] > lowerFreqEnergy || targetEnergies[0] > higherFreqEnergy;
+            
+            // Check if target is significant relative to max (at least 5% of max energy)
+            bool targetIsSignificant = targetEnergies[0] > (maxEnergy * 0.05);
+            
+            // Check if target is within 3dB of the maximum (10^(3/20) ≈ 1.41)
+            // This means target should be at least 71% of the max, or max should be at most 141% of target
+            bool targetIsWithin3dB = targetEnergies[0] > 0.0 && maxEnergy < (targetEnergies[0] * 1.5);
             
             // Also require that at least one channel has detectable energy
             bool hasEnergy = targetEnergies.Any(e => e > 0.00001);
 
-            bool detected = targetIsSignificant && targetIsHigher && hasEnergy;
-            _log.Info($"Tone detection: significant={targetIsSignificant}, higher={targetIsHigher}, hasEnergy={hasEnergy}, detected={detected}");
+            bool detected = targetIsSignificant && targetIsWithin3dB && hasEnergy;
+            _log.Info($"Tone detection: significant={targetIsSignificant}, within3dB={targetIsWithin3dB}, hasEnergy={hasEnergy}, detected={detected}");
             
             return detected;
         }

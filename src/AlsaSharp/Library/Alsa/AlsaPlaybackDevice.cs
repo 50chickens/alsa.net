@@ -70,7 +70,7 @@ internal class AlsaPlaybackDevice : IDisposable
     /// <param name="dataProvider">Function that provides audio data. Returns 0 when no data available (non-blocking).</param>
     /// <param name="waitMs">How long to wait (ms) for data before returning partial frame</param>
     /// <param name="cancellationToken">Cancellation token to stop playback</param>
-    public void c(int sampleRate, int channels, int bitsPerSample,
+    public void PlayFromQueue(int sampleRate, int channels, int bitsPerSample,
         Func<byte[], int> dataProvider, int waitMs, CancellationToken cancellationToken)
     {
         if (dataProvider == null)
