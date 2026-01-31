@@ -214,7 +214,7 @@ public class SNRReductionWorker(ILog<SNRReductionWorker> log,
             _log.Info($"Executing copy-only test on device: {device.Settings.CardName}");
             try
             {
-                _copyOnlyService.CopyAudioChannels(device, 5000, stoppingToken);
+                _copyOnlyService.CopyAudioChannels(device, 50000, stoppingToken);
                 _log.Info("Copy-only test completed successfully");
             }
             catch (Exception ex)
