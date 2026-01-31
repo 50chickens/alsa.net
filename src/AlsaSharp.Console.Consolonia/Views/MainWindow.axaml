@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AlsaSharp.Console.Consolonia.ViewModels"
+        xmlns:views="using:AlsaSharp.Console.Consolonia.Views"
+        x:Class="AlsaSharp.Console.Consolonia.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="AlsaSharp Console"
+        Width="100"
+        Height="30">
+    
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:MainViewModel">
+            <views:MainView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:LoopbackTestViewModel">
+            <views:LoopbackTestView />
+        </DataTemplate>
+    </Window.DataTemplates>
+    
+    <ContentControl Content="{Binding CurrentView}" />
+</Window>
