@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AlsaSharp.Console.Consolonia.ViewModels"
+             x:Class="AlsaSharp.Console.Consolonia.Views.LoopbackTestView"
+             x:DataType="vm:LoopbackTestViewModel">
+    
+    <StackPanel Margin="10">
+        <TextBlock Text="Loopback Test" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,10" />
+        
+        <StackPanel Margin="0,5">
+            <TextBlock Text="Card Name:" Margin="0,0,0,2" />
+            <TextBox Text="{Binding CardName}" 
+                     Width="200" 
+                     HorizontalAlignment="Left" />
+        </StackPanel>
+        
+        <StackPanel Margin="0,5">
+            <TextBlock Text="Test Duration (ms):" Margin="0,0,0,2" />
+            <NumericUpDown Value="{Binding TestDurationMs}" 
+                          Minimum="100" 
+                          Maximum="60000" 
+                          Increment="100"
+                          Width="200"
+                          HorizontalAlignment="Left" />
+        </StackPanel>
+        
+        <StackPanel Margin="0,5">
+            <TextBlock Text="Test Level (dBFS):" Margin="0,0,0,2" />
+            <NumericUpDown Value="{Binding TestLevelDbfs}" 
+                          Minimum="-90" 
+                          Maximum="0" 
+                          Increment="1"
+                          FormatString="F1"
+                          Width="200"
+                          HorizontalAlignment="Left" />
+        </StackPanel>
+        
+        <StackPanel Orientation="Horizontal" Margin="0,10">
+            <Button Content="Execute Test" 
+                    Command="{Binding ExecuteTestCommand}"
+                    IsEnabled="{Binding !IsRunning}"
+                    Margin="0,0,5,0" />
+            <Button Content="Back to Menu" 
+                    Command="{Binding BackCommand}"
+                    Margin="5,0,0,0" />
+        </StackPanel>
+        
+        <Border BorderBrush="Gray" 
+                BorderThickness="1" 
+                Padding="10" 
+                Margin="0,10,0,0"
+                MinHeight="100">
+            <ScrollViewer>
+                <TextBlock Text="{Binding ResultMessage}" 
+                          TextWrapping="Wrap" />
+            </ScrollViewer>
+        </Border>
+    </StackPanel>
+</UserControl>

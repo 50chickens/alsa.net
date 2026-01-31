@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AlsaSharp.Console.Consolonia.ViewModels"
+             x:Class="AlsaSharp.Console.Consolonia.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    
+    <StackPanel Margin="10">
+        <TextBlock Text="AlsaSharp Audio Testing Tool" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,10" />
+        
+        <TextBlock Text="Main Menu" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,5" />
+        
+        <ListBox MinHeight="10" Margin="0,5">
+            <ListBoxItem>
+                <Button Content="1. Loopback Test" 
+                        Command="{Binding NavigateToLoopbackTestCommand}"
+                        HorizontalAlignment="Stretch" />
+            </ListBoxItem>
+            <ListBoxItem>
+                <TextBlock Text="2. SNR Test (TODO)" />
+            </ListBoxItem>
+            <ListBoxItem>
+                <TextBlock Text="3. Test Tone (TODO)" />
+            </ListBoxItem>
+            <ListBoxItem>
+                <TextBlock Text="4. Audio Levels (TODO)" />
+            </ListBoxItem>
+            <ListBoxItem>
+                <Button Content="5. Quit" 
+                        Command="{Binding QuitCommand}"
+                        HorizontalAlignment="Stretch" />
+            </ListBoxItem>
+        </ListBox>
+        
+        <TextBlock Text="Select an option using the arrow keys and Enter." 
+                   Margin="0,10,0,0"
+                   FontStyle="Italic" />
+    </StackPanel>
+</UserControl>
